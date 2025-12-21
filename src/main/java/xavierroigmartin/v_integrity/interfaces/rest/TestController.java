@@ -1,4 +1,4 @@
-package xavierroigmartin.v_integrity.controller;
+package xavierroigmartin.v_integrity.interfaces.rest;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

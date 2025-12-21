@@ -1,4 +1,4 @@
-package xavierroigmartin.v_integrity.exception;
+package xavierroigmartin.v_integrity.interfaces.rest.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
@@ -27,7 +27,4 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
-    
-    // Puedes añadir más @ExceptionHandler aquí para excepciones específicas
-    // como ResourceNotFoundException, BadRequestException, etc.
 }

@@ -1,4 +1,4 @@
-package xavierroigmartin.v_integrity.exception;
+package xavierroigmartin.v_integrity.interfaces.rest.exception;
 
 import java.time.LocalDateTime;
 
