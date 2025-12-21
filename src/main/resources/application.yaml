@@ -1,3 +1,19 @@
 spring:
   application:
     name: v-integrity
+  jackson:
+    time-zone: UTC
+  jpa:
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+logging:
+  level:
+    root: INFO
+    xavierroigmartin.v_integrity: DEBUG
+    org.springframework.web: INFO
+    org.hibernate: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
