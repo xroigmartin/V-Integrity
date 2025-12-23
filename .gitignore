@@ -38,3 +38,7 @@ build/
 certificates/
 *.pem
 *.b64
+
+### Logs ###
+logs/
+*.log

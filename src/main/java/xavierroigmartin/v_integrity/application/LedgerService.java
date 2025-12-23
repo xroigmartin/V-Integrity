@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
@@ -12,6 +13,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.stereotype.Service;
 import xavierroigmartin.v_integrity.application.port.out.CryptoPort;
 import xavierroigmartin.v_integrity.application.port.out.HashingPort;
+import xavierroigmartin.v_integrity.application.port.out.LogPort;
 import xavierroigmartin.v_integrity.application.port.out.NodeConfigurationPort;
 import xavierroigmartin.v_integrity.application.port.out.ReplicationPort;
 import xavierroigmartin.v_integrity.domain.Block;
@@ -35,17 +37,19 @@ public class LedgerService {
     private final HashingPort hashing;
     private final CryptoPort crypto;
     private final ReplicationPort replication;
+    private final LogPort logger;
 
     // In-memory state (PoC)
     private final List<Block> chain = new ArrayList<>();
     private final List<EvidenceRecord> mempool = new ArrayList<>();
     private final AtomicLong evidenceSequence = new AtomicLong(0);
 
-    public LedgerService(NodeConfigurationPort nodeConfig, HashingPort hashing, CryptoPort crypto, ReplicationPort replication) {
+    public LedgerService(NodeConfigurationPort nodeConfig, HashingPort hashing, CryptoPort crypto, ReplicationPort replication, LogPort logger) {
         this.nodeConfig = nodeConfig;
         this.hashing = hashing;
         this.crypto = crypto;
         this.replication = replication;
+        this.logger = logger;
         chain.add(createGenesis());
     }
 
@@ -105,6 +109,13 @@ public class LedgerService {
             mempool.add(normalized);
             evidenceSequence.incrementAndGet();
         }
+
+        logger.logBusinessEvent("EVIDENCE_SUBMITTED", Map.of(
+            "evidenceId", normalized.evidenceId(),
+            "hash", normalized.hash(),
+            "createdBy", normalized.createdBy()
+        ));
+
         return normalized;
     }
 
@@ -150,6 +161,13 @@ public class LedgerService {
             mempool.clear();
         }
 
+        logger.logBusinessEvent("BLOCK_COMMITTED", Map.of(
+            "height", newBlock.height(),
+            "hash", newBlock.hash(),
+            "evidencesCount", newBlock.evidences().size(),
+            "proposer", newBlock.proposerNodeId()
+        ));
+
         replication.replicateBlockToPeers(newBlock, peerUrls);
         return newBlock;
     }
@@ -164,7 +182,9 @@ public class LedgerService {
         Block prev = latest();
 
         if (incoming.height() != prev.height() + 1) {
-            throw new IllegalArgumentException("Invalid Height. Expected " + (prev.height() + 1) + " but received " + incoming.height());
+            String msg = "Invalid Height. Expected " + (prev.height() + 1) + " but received " + incoming.height();
+            logger.logBusinessError("INVALID_BLOCK_HEIGHT", msg, Map.of("proposer", incoming.proposerNodeId()));
+            throw new IllegalArgumentException(msg);
         }
         if (!Objects.equals(incoming.previousHash(), prev.hash())) {
             throw new IllegalArgumentException("Invalid previousHash.");
@@ -186,6 +206,7 @@ public class LedgerService {
         String recomputedHash = hashing.sha256Hex(canonical);
 
         if (!Objects.equals(recomputedHash, incoming.hash())) {
+            logger.logBusinessError("INVALID_BLOCK_HASH", "Hash mismatch", Map.of("received", incoming.hash(), "computed", recomputedHash));
             throw new IllegalArgumentException("Invalid Hash (does not match recomputed hash).");
         }
 
@@ -193,6 +214,7 @@ public class LedgerService {
         byte[] hashBytes = hexToBytes(incoming.hash());
         boolean okSig = crypto.verifyEd25519(hashBytes, incoming.signature(), pubKey);
         if (!okSig) {
+            logger.logBusinessError("INVALID_BLOCK_SIGNATURE", "Signature verification failed", Map.of("proposer", incoming.proposerNodeId()));
             throw new IllegalArgumentException("Invalid signature for proposer " + incoming.proposerNodeId());
         }
 
@@ -201,6 +223,12 @@ public class LedgerService {
 
         // PoC: remove confirmed evidences from mempool if they exist
         mempool.removeAll(incoming.evidences());
+
+        logger.logBusinessEvent("BLOCK_ACCEPTED", Map.of(
+            "height", incoming.height(),
+            "hash", incoming.hash(),
+            "proposer", incoming.proposerNodeId()
+        ));
     }
 
     /**
