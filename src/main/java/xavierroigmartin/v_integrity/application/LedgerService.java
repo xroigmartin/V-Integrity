@@ -17,6 +17,17 @@ import xavierroigmartin.v_integrity.application.port.out.ReplicationPort;
 import xavierroigmartin.v_integrity.domain.Block;
 import xavierroigmartin.v_integrity.domain.EvidenceRecord;
 
+/**
+ * Core application service that manages the blockchain ledger state.
+ * <p>
+ * This service is responsible for:
+ * <ul>
+ *     <li>Maintaining the in-memory blockchain (PoC).</li>
+ *     <li>Managing the mempool of pending evidences.</li>
+ *     <li>Creating new blocks (mining/committing) if the node is a leader.</li>
+ *     <li>Validating and accepting blocks replicated from other nodes.</li>
+ * </ul>
+ */
 @Service
 public class LedgerService {
 
@@ -25,7 +36,7 @@ public class LedgerService {
     private final CryptoPort crypto;
     private final ReplicationPort replication;
 
-    // Estado en memoria (PoC)
+    // In-memory state (PoC)
     private final List<Block> chain = new ArrayList<>();
     private final List<EvidenceRecord> mempool = new ArrayList<>();
     private final AtomicLong evidenceSequence = new AtomicLong(0);
@@ -38,22 +49,41 @@ public class LedgerService {
         chain.add(createGenesis());
     }
 
+    /**
+     * Returns a read-only copy of the current blockchain.
+     *
+     * @return List of blocks in the chain.
+     */
     public synchronized List<Block> chain() {
         return List.copyOf(chain);
     }
 
+    /**
+     * Returns a read-only copy of the current mempool (pending evidences).
+     *
+     * @return List of pending evidences.
+     */
     public synchronized List<EvidenceRecord> mempool() {
         return List.copyOf(mempool);
     }
 
+    /**
+     * Submits a new evidence record to the mempool.
+     * <p>
+     * Performs basic validation and normalization before adding it to the pending list.
+     *
+     * @param evidence The evidence record to submit.
+     * @return The normalized evidence record as stored in the mempool.
+     * @throws IllegalArgumentException if the hash algorithm is not supported or the hash format is invalid.
+     */
     public EvidenceRecord submitEvidence(EvidenceRecord evidence) {
-        // Validaciones PoC mínimas
+        // Minimal PoC validations
         String algo = normalizeAlgo(evidence.hashAlgorithm());
         if (!"SHA-256".equals(algo)) {
-            throw new IllegalArgumentException("hashAlgorithm soportado en PoC: SHA-256");
+            throw new IllegalArgumentException("Supported hashAlgorithm in PoC: SHA-256");
         }
         if (!isValidHexSha256(evidence.hash())) {
-            throw new IllegalArgumentException("hash inválido: debe ser hex de 64 chars (SHA-256)");
+            throw new IllegalArgumentException("Invalid hash: must be a 64-character hex string (SHA-256)");
         }
 
         EvidenceRecord normalized = new EvidenceRecord(
@@ -79,14 +109,17 @@ public class LedgerService {
     }
 
     /**
-     * Solo líder: sella evidencias del mempool en un bloque firmado y lo replica.
+     * Leader only: Seals pending evidences from the mempool into a new signed block and replicates it.
+     *
+     * @return The newly created and committed block.
+     * @throws IllegalStateException if the node is not a leader, has no private key, or the mempool is empty.
      */
     public Block commitAsLeader() {
         if (!nodeConfig.isLeader()) {
-            throw new IllegalStateException("Este nodo no es líder; no puede hacer commit.");
+            throw new IllegalStateException("This node is not a leader; cannot commit blocks.");
         }
         if (nodeConfig.getPrivateKeyBase64() == null || nodeConfig.getPrivateKeyBase64().isBlank()) {
-            throw new IllegalStateException("Falta ledger.node.privateKeyBase64 para firmar bloques.");
+            throw new IllegalStateException("Missing ledger.node.privateKeyBase64 to sign blocks.");
         }
 
         final Block newBlock;
@@ -94,7 +127,7 @@ public class LedgerService {
 
         synchronized (this) {
             if (mempool.isEmpty()) {
-                throw new IllegalStateException("No hay evidencias pendientes en mempool.");
+                throw new IllegalStateException("No pending evidences in mempool.");
             }
 
             Block prev = latest();
@@ -122,21 +155,24 @@ public class LedgerService {
     }
 
     /**
-     * Followers: reciben bloque ya sellado por líder, validan y aceptan.
+     * Followers: Receive a block already sealed by a leader, validate it, and accept it.
+     *
+     * @param incoming The block received from a peer.
+     * @throws IllegalArgumentException if the block is invalid (height, hash, signature, etc.).
      */
     public synchronized void acceptReplicatedBlock(Block incoming) {
         Block prev = latest();
 
         if (incoming.height() != prev.height() + 1) {
-            throw new IllegalArgumentException("Height inválido. Esperado " + (prev.height() + 1) + " y recibido " + incoming.height());
+            throw new IllegalArgumentException("Invalid Height. Expected " + (prev.height() + 1) + " but received " + incoming.height());
         }
         if (!Objects.equals(incoming.previousHash(), prev.hash())) {
-            throw new IllegalArgumentException("previousHash inválido.");
+            throw new IllegalArgumentException("Invalid previousHash.");
         }
 
         String pubKey = nodeConfig.getAllowedNodePublicKeys().get(incoming.proposerNodeId());
         if (pubKey == null || pubKey.isBlank()) {
-            throw new IllegalArgumentException("Proposer no autorizado: " + incoming.proposerNodeId());
+            throw new IllegalArgumentException("Unauthorized Proposer: " + incoming.proposerNodeId());
         }
 
         // Recompute hash
@@ -150,23 +186,28 @@ public class LedgerService {
         String recomputedHash = hashing.sha256Hex(canonical);
 
         if (!Objects.equals(recomputedHash, incoming.hash())) {
-            throw new IllegalArgumentException("Hash inválido (no coincide con recomputado).");
+            throw new IllegalArgumentException("Invalid Hash (does not match recomputed hash).");
         }
 
         // Verify signature
         byte[] hashBytes = hexToBytes(incoming.hash());
         boolean okSig = crypto.verifyEd25519(hashBytes, incoming.signature(), pubKey);
         if (!okSig) {
-            throw new IllegalArgumentException("Firma inválida para proposer " + incoming.proposerNodeId());
+            throw new IllegalArgumentException("Invalid signature for proposer " + incoming.proposerNodeId());
         }
 
         // append-only
         chain.add(incoming);
 
-        // PoC: limpiamos mempool de evidencias ya confirmadas si existieran
+        // PoC: remove confirmed evidences from mempool if they exist
         mempool.removeAll(incoming.evidences());
     }
 
+    /**
+     * Validates the integrity of the entire local blockchain.
+     *
+     * @return true if the chain is valid, false otherwise.
+     */
     public synchronized boolean isValidLocalChain() {
         if (chain.isEmpty()) return false;
 
@@ -191,6 +232,12 @@ public class LedgerService {
         return true;
     }
 
+    /**
+     * Searches for an evidence by its hash in the entire chain.
+     *
+     * @param hashHex The SHA-256 hash of the evidence.
+     * @return An Optional containing the EvidenceProof (evidence + block) if found.
+     */
     public synchronized Optional<EvidenceProof> findEvidenceByHash(String hashHex) {
         String h = hashHex == null ? "" : hashHex.trim().toLowerCase(Locale.ROOT);
 
@@ -222,6 +269,7 @@ public class LedgerService {
     }
 
     private String canonicalBlockFields(long height, Instant ts, List<EvidenceRecord> evidences, String previousHash, String proposer) {
+        // Deterministic canonicalization (very important)
         StringBuilder sb = new StringBuilder();
         sb.append("height=").append(height).append("|");
         sb.append("ts=").append(ts.toString()).append("|");
@@ -229,6 +277,7 @@ public class LedgerService {
         sb.append("proposer=").append(proposer).append("|");
         sb.append("evidences=");
 
+        // Deterministic sort by evidenceId
         List<EvidenceRecord> sorted = new ArrayList<>(evidences);
         sorted.sort(Comparator.comparing(EvidenceRecord::evidenceId));
 
@@ -245,6 +294,7 @@ public class LedgerService {
             sb.append(e.storageUri() == null ? "" : e.storageUri()).append(",");
             sb.append(e.createdAt().toString()).append(",");
 
+            // sorted standards
             List<String> std = e.standards() == null ? List.of() : e.standards();
             List<String> stdSorted = new ArrayList<>(std);
             stdSorted.sort(String::compareTo);

@@ -21,6 +21,18 @@ import xavierroigmartin.v_integrity.domain.EvidenceRecord;
 import xavierroigmartin.v_integrity.interfaces.rest.dto.EvidenceRequest;
 import xavierroigmartin.v_integrity.interfaces.rest.dto.VerifyRequest;
 
+/**
+ * REST Controller exposing the blockchain ledger functionality.
+ * <p>
+ * Provides endpoints for:
+ * <ul>
+ *     <li>Querying the chain and mempool state.</li>
+ *     <li>Submitting new evidences.</li>
+ *     <li>Committing blocks (Leader only).</li>
+ *     <li>Receiving replicated blocks (Followers).</li>
+ *     <li>Verifying evidences and chain integrity.</li>
+ * </ul>
+ */
 @RestController
 @RequestMapping("/api")
 public class LedgerController {
@@ -35,16 +47,32 @@ public class LedgerController {
         this.nodeConfig = nodeConfig;
     }
 
+    /**
+     * Retrieves the full blockchain.
+     *
+     * @return A map containing the chain length and the list of blocks.
+     */
     @GetMapping("/chain")
     public Map<String, Object> chain() {
         return Map.of("length", ledger.chain().size(), "chain", ledger.chain());
     }
 
+    /**
+     * Retrieves the current mempool (pending evidences).
+     *
+     * @return A map containing the mempool size and the list of pending evidences.
+     */
     @GetMapping("/mempool")
     public Map<String, Object> mempool() {
         return Map.of("size", ledger.mempool().size(), "mempool", ledger.mempool());
     }
 
+    /**
+     * Submits a new evidence to be secured in the blockchain.
+     *
+     * @param req The evidence request containing artifact metadata and hash.
+     * @return A map containing the stored evidence record.
+     */
     @PostMapping("/evidences")
     @ResponseStatus(HttpStatus.CREATED)
     public Map<String, Object> submitEvidence(@Valid @RequestBody EvidenceRequest req) {
@@ -66,6 +94,13 @@ public class LedgerController {
         return Map.of("evidence", stored);
     }
 
+    /**
+     * Triggers the block creation process (mining/commit).
+     * <p>
+     * Only available if the current node is configured as a LEADER.
+     *
+     * @return A map containing the newly created block.
+     */
     @PostMapping("/blocks/commit")
     @ResponseStatus(HttpStatus.CREATED)
     public Map<String, Object> commit() {
@@ -73,6 +108,12 @@ public class LedgerController {
         return Map.of("block", block);
     }
 
+    /**
+     * Endpoint for receiving blocks replicated from other nodes.
+     *
+     * @param incoming The block received from a peer.
+     * @return A map indicating acceptance and the block height.
+     */
     @PostMapping("/blocks/receive")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public Map<String, Object> receive(@RequestBody Block incoming) {
@@ -80,13 +121,21 @@ public class LedgerController {
         return Map.of("accepted", true, "height", incoming.height());
     }
 
+    /**
+     * Validates the integrity of the local blockchain.
+     *
+     * @return A map with "valid": true/false.
+     */
     @GetMapping("/validate")
     public Map<String, Object> validate() {
         return Map.of("valid", ledger.isValidLocalChain());
     }
 
     /**
-     * Consulta directa por hash (útil para debug / demos).
+     * Direct query by hash (useful for debug / demos).
+     *
+     * @param hash The SHA-256 hash of the evidence.
+     * @return A map with "found": true/false and the evidence details if found.
      */
     @GetMapping("/evidences/hash/{hash}")
     public Map<String, Object> getEvidenceByHash(@PathVariable String hash) {
@@ -99,7 +148,10 @@ public class LedgerController {
     }
 
     /**
-     * Verificación por hash: devuelve proof orientado a auditoría.
+     * Verification by hash: returns an audit-oriented proof.
+     *
+     * @param req The verification request containing the hash.
+     * @return A map containing verification status and cryptographic proof details.
      */
     @PostMapping("/verify")
     public Map<String, Object> verify(@Valid @RequestBody VerifyRequest req) {
@@ -126,7 +178,7 @@ public class LedgerController {
     private Map<String, Object> proofFrom(LedgerService.EvidenceProof ep) {
         Block b = ep.block();
 
-        // Validación explícita de firma (para “proof” en demo)
+        // Explicit signature validation (for "proof" in demo)
         String pubKey = nodeConfig.getAllowedNodePublicKeys().get(b.proposerNodeId());
         boolean signatureValid = false;
         if (pubKey != null && !pubKey.isBlank() && !"GENESIS".equals(b.proposerNodeId())) {

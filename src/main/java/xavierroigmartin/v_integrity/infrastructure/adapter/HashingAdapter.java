@@ -6,6 +6,11 @@ import xavierroigmartin.v_integrity.application.port.out.HashingPort;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 
+/**
+ * Implementation of {@link HashingPort} using Java's {@link MessageDigest}.
+ * <p>
+ * Provides standard SHA-256 hashing functionality.
+ */
 @Component
 public class HashingAdapter implements HashingPort {
     
@@ -16,7 +21,7 @@ public class HashingAdapter implements HashingPort {
             byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
             return toHex(hash);
         } catch (Exception e) {
-            throw new IllegalStateException("No se pudo calcular SHA-256", e);
+            throw new IllegalStateException("Could not compute SHA-256", e);
         }
     }
 
@@ -26,7 +31,7 @@ public class HashingAdapter implements HashingPort {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             return digest.digest(input.getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
-            throw new IllegalStateException("No se pudo calcular SHA-256", e);
+            throw new IllegalStateException("Could not compute SHA-256", e);
         }
     }
 

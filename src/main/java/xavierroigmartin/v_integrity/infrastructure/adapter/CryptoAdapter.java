@@ -11,6 +11,12 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 
+/**
+ * Implementation of {@link CryptoPort} using Java's standard security libraries (JCA).
+ * <p>
+ * Uses "Ed25519" algorithm for digital signatures, which is standard in modern blockchains
+ * for its high performance and security.
+ */
 @Component
 public class CryptoAdapter implements CryptoPort {
 
@@ -27,7 +33,7 @@ public class CryptoAdapter implements CryptoPort {
             byte[] signature = sig.sign();
             return Base64.getEncoder().encodeToString(signature);
         } catch (Exception e) {
-            throw new IllegalStateException("Error firmando Ed25519", e);
+            throw new IllegalStateException("Error signing with Ed25519", e);
         }
     }
 
@@ -44,6 +50,7 @@ public class CryptoAdapter implements CryptoPort {
             byte[] signature = Base64.getDecoder().decode(signatureBase64);
             return sig.verify(signature);
         } catch (Exception e) {
+            // If any error occurs during verification (bad format, etc.), consider signature invalid.
             return false;
         }
     }
