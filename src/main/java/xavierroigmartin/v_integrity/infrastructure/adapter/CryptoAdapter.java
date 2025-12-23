@@ -1,4 +1,7 @@
-package xavierroigmartin.v_integrity.application;
+package xavierroigmartin.v_integrity.infrastructure.adapter;
+
+import org.springframework.stereotype.Component;
+import xavierroigmartin.v_integrity.application.port.out.CryptoPort;
 
 import java.security.KeyFactory;
 import java.security.PrivateKey;
@@ -8,11 +11,10 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 
-import org.springframework.stereotype.Component;
-
 @Component
-public class CryptoService {
+public class CryptoAdapter implements CryptoPort {
 
+    @Override
     public String signEd25519(byte[] message, String privateKeyBase64) {
         try {
             byte[] pkcs8 = Base64.getDecoder().decode(privateKeyBase64);
@@ -29,6 +31,7 @@ public class CryptoService {
         }
     }
 
+    @Override
     public boolean verifyEd25519(byte[] message, String signatureBase64, String publicKeyBase64) {
         try {
             byte[] x509 = Base64.getDecoder().decode(publicKeyBase64);

@@ -5,9 +5,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import xavierroigmartin.v_integrity.config.NodeProperties;
+import xavierroigmartin.v_integrity.application.port.out.CryptoPort;
+import xavierroigmartin.v_integrity.application.port.out.HashingPort;
+import xavierroigmartin.v_integrity.application.port.out.NodeConfigurationPort;
+import xavierroigmartin.v_integrity.application.port.out.ReplicationPort;
 import xavierroigmartin.v_integrity.domain.Block;
 import xavierroigmartin.v_integrity.domain.EvidenceRecord;
+import xavierroigmartin.v_integrity.infrastructure.adapter.CryptoAdapter;
+import xavierroigmartin.v_integrity.infrastructure.adapter.HashingAdapter;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -24,13 +29,13 @@ import static org.mockito.Mockito.*;
 class LedgerServiceTest {
 
     @Mock
-    private NodeProperties nodeProperties;
+    private NodeConfigurationPort nodeConfig;
     @Mock
-    private ReplicationService replicationService;
+    private ReplicationPort replication;
 
     private LedgerService ledgerService;
-    private CryptoService cryptoService;
-    private HashingService hashingService;
+    private CryptoPort crypto;
+    private HashingPort hashing;
 
     private String myNodeId = "node-1";
     private String myPrivateKey;
@@ -38,8 +43,9 @@ class LedgerServiceTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        cryptoService = new CryptoService();
-        hashingService = new HashingService();
+        // Use real adapters for logic-heavy ports
+        crypto = new CryptoAdapter();
+        hashing = new HashingAdapter();
 
         // Generate real keys for testing
         KeyPairGenerator kpg = KeyPairGenerator.getInstance("Ed25519");
@@ -48,10 +54,10 @@ class LedgerServiceTest {
         myPublicKey = Base64.getEncoder().encodeToString(kp.getPublic().getEncoded());
 
         // Default mock behavior
-        lenient().when(nodeProperties.getNodeId()).thenReturn(myNodeId);
-        lenient().when(nodeProperties.getAllowedNodePublicKeys()).thenReturn(Map.of(myNodeId, myPublicKey));
+        lenient().when(nodeConfig.getNodeId()).thenReturn(myNodeId);
+        lenient().when(nodeConfig.getAllowedNodePublicKeys()).thenReturn(Map.of(myNodeId, myPublicKey));
         
-        ledgerService = new LedgerService(nodeProperties, hashingService, cryptoService, replicationService);
+        ledgerService = new LedgerService(nodeConfig, hashing, crypto, replication);
     }
 
     @Test
@@ -75,9 +81,9 @@ class LedgerServiceTest {
     @Test
     void should_commit_block_as_leader() {
         // Given
-        when(nodeProperties.isLeader()).thenReturn(true);
-        when(nodeProperties.getPrivateKeyBase64()).thenReturn(myPrivateKey);
-        when(nodeProperties.getPeers()).thenReturn(List.of("http://peer1"));
+        when(nodeConfig.isLeader()).thenReturn(true);
+        when(nodeConfig.getPrivateKeyBase64()).thenReturn(myPrivateKey);
+        when(nodeConfig.getPeers()).thenReturn(List.of("http://peer1"));
 
         ledgerService.submitEvidence(createSampleEvidence());
 
@@ -91,7 +97,7 @@ class LedgerServiceTest {
         assertEquals(myNodeId, block.proposerNodeId());
         
         // Verify replication was called
-        verify(replicationService).replicateBlockToPeers(eq(block), anyList());
+        verify(replication).replicateBlockToPeers(eq(block), anyList());
         
         // Mempool should be empty
         assertTrue(ledgerService.mempool().isEmpty());
@@ -100,7 +106,7 @@ class LedgerServiceTest {
 
     @Test
     void should_fail_commit_if_not_leader() {
-        when(nodeProperties.isLeader()).thenReturn(false);
+        when(nodeConfig.isLeader()).thenReturn(false);
 
         assertThrows(IllegalStateException.class, () -> ledgerService.commitAsLeader());
     }
@@ -108,14 +114,14 @@ class LedgerServiceTest {
     @Test
     void should_accept_valid_replicated_block() {
         // 1. Create a valid block (simulating another leader or self)
-        when(nodeProperties.isLeader()).thenReturn(true);
-        when(nodeProperties.getPrivateKeyBase64()).thenReturn(myPrivateKey);
+        when(nodeConfig.isLeader()).thenReturn(true);
+        when(nodeConfig.getPrivateKeyBase64()).thenReturn(myPrivateKey);
         
         ledgerService.submitEvidence(createSampleEvidence());
         Block validBlock = ledgerService.commitAsLeader();
 
         // Reset service to simulate a follower receiving this block
-        LedgerService followerService = new LedgerService(nodeProperties, hashingService, cryptoService, replicationService);
+        LedgerService followerService = new LedgerService(nodeConfig, hashing, crypto, replication);
         
         // When
         followerService.acceptReplicatedBlock(validBlock);
@@ -128,8 +134,8 @@ class LedgerServiceTest {
     @Test
     void should_reject_invalid_signature_block() {
         // Given
-        when(nodeProperties.isLeader()).thenReturn(true);
-        when(nodeProperties.getPrivateKeyBase64()).thenReturn(myPrivateKey);
+        when(nodeConfig.isLeader()).thenReturn(true);
+        when(nodeConfig.getPrivateKeyBase64()).thenReturn(myPrivateKey);
         ledgerService.submitEvidence(createSampleEvidence());
         Block validBlock = ledgerService.commitAsLeader();
 
@@ -144,7 +150,7 @@ class LedgerServiceTest {
                 validBlock.signature()
         );
 
-        LedgerService followerService = new LedgerService(nodeProperties, hashingService, cryptoService, replicationService);
+        LedgerService followerService = new LedgerService(nodeConfig, hashing, crypto, replication);
 
         // When/Then
         assertThrows(IllegalArgumentException.class, () -> followerService.acceptReplicatedBlock(tamperedBlock));

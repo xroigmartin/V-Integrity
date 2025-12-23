@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import xavierroigmartin.v_integrity.config.NodeProperties;
+import xavierroigmartin.v_integrity.infrastructure.config.NodeProperties;
 
 @SpringBootApplication
 @EnableConfigurationProperties(NodeProperties.class)

@@ -1,12 +1,15 @@
-package xavierroigmartin.v_integrity.application;
+package xavierroigmartin.v_integrity.infrastructure.adapter;
+
+import org.springframework.stereotype.Component;
+import xavierroigmartin.v_integrity.application.port.out.HashingPort;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 
-import org.springframework.stereotype.Component;
-
 @Component
-public class HashingService {
+public class HashingAdapter implements HashingPort {
+    
+    @Override
     public String sha256Hex(String input) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -17,6 +20,7 @@ public class HashingService {
         }
     }
 
+    @Override
     public byte[] sha256Bytes(String input) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");

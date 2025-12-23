@@ -10,25 +10,28 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.springframework.stereotype.Service;
-import xavierroigmartin.v_integrity.config.NodeProperties;
+import xavierroigmartin.v_integrity.application.port.out.CryptoPort;
+import xavierroigmartin.v_integrity.application.port.out.HashingPort;
+import xavierroigmartin.v_integrity.application.port.out.NodeConfigurationPort;
+import xavierroigmartin.v_integrity.application.port.out.ReplicationPort;
 import xavierroigmartin.v_integrity.domain.Block;
 import xavierroigmartin.v_integrity.domain.EvidenceRecord;
 
 @Service
 public class LedgerService {
 
-    private final NodeProperties props;
-    private final HashingService hashing;
-    private final CryptoService crypto;
-    private final ReplicationService replication;
+    private final NodeConfigurationPort nodeConfig;
+    private final HashingPort hashing;
+    private final CryptoPort crypto;
+    private final ReplicationPort replication;
 
     // Estado en memoria (PoC)
     private final List<Block> chain = new ArrayList<>();
     private final List<EvidenceRecord> mempool = new ArrayList<>();
     private final AtomicLong evidenceSequence = new AtomicLong(0);
 
-    public LedgerService(NodeProperties props, HashingService hashing, CryptoService crypto, ReplicationService replication) {
-        this.props = props;
+    public LedgerService(NodeConfigurationPort nodeConfig, HashingPort hashing, CryptoPort crypto, ReplicationPort replication) {
+        this.nodeConfig = nodeConfig;
         this.hashing = hashing;
         this.crypto = crypto;
         this.replication = replication;
@@ -79,15 +82,15 @@ public class LedgerService {
      * Solo líder: sella evidencias del mempool en un bloque firmado y lo replica.
      */
     public Block commitAsLeader() {
-        if (!props.isLeader()) {
+        if (!nodeConfig.isLeader()) {
             throw new IllegalStateException("Este nodo no es líder; no puede hacer commit.");
         }
-        if (props.getPrivateKeyBase64() == null || props.getPrivateKeyBase64().isBlank()) {
+        if (nodeConfig.getPrivateKeyBase64() == null || nodeConfig.getPrivateKeyBase64().isBlank()) {
             throw new IllegalStateException("Falta ledger.node.privateKeyBase64 para firmar bloques.");
         }
 
         final Block newBlock;
-        final List<String> peerUrls = props.getPeers();
+        final List<String> peerUrls = nodeConfig.getPeers();
 
         synchronized (this) {
             if (mempool.isEmpty()) {
@@ -99,13 +102,13 @@ public class LedgerService {
             Instant ts = Instant.now();
             List<EvidenceRecord> evidences = List.copyOf(mempool);
             String previousHash = prev.hash();
-            String proposer = props.getNodeId();
+            String proposer = nodeConfig.getNodeId();
 
             String canonical = canonicalBlockFields(height, ts, evidences, previousHash, proposer);
             String hashHex = hashing.sha256Hex(canonical);
             byte[] hashBytes = hexToBytes(hashHex);
 
-            String signature = crypto.signEd25519(hashBytes, props.getPrivateKeyBase64());
+            String signature = crypto.signEd25519(hashBytes, nodeConfig.getPrivateKeyBase64());
 
             newBlock = new Block(height, ts, evidences, previousHash, proposer, hashHex, signature);
 
@@ -131,7 +134,7 @@ public class LedgerService {
             throw new IllegalArgumentException("previousHash inválido.");
         }
 
-        String pubKey = props.getAllowedNodePublicKeys().get(incoming.proposerNodeId());
+        String pubKey = nodeConfig.getAllowedNodePublicKeys().get(incoming.proposerNodeId());
         if (pubKey == null || pubKey.isBlank()) {
             throw new IllegalArgumentException("Proposer no autorizado: " + incoming.proposerNodeId());
         }
@@ -174,7 +177,7 @@ public class LedgerService {
             if (cur.height() != prev.height() + 1) return false;
             if (!Objects.equals(cur.previousHash(), prev.hash())) return false;
 
-            String pubKey = props.getAllowedNodePublicKeys().get(cur.proposerNodeId());
+            String pubKey = nodeConfig.getAllowedNodePublicKeys().get(cur.proposerNodeId());
             if (pubKey == null || pubKey.isBlank()) return false;
 
             String canonical = canonicalBlockFields(cur.height(), cur.timestamp(), cur.evidences(), cur.previousHash(), cur.proposerNodeId());
@@ -188,9 +191,6 @@ public class LedgerService {
         return true;
     }
 
-    /**
-     * Busca por hash en toda la cadena. Devuelve Optional con evidencia + proof.
-     */
     public synchronized Optional<EvidenceProof> findEvidenceByHash(String hashHex) {
         String h = hashHex == null ? "" : hashHex.trim().toLowerCase(Locale.ROOT);
 
@@ -222,7 +222,6 @@ public class LedgerService {
     }
 
     private String canonicalBlockFields(long height, Instant ts, List<EvidenceRecord> evidences, String previousHash, String proposer) {
-        // Canonicalización determinista (muy importante)
         StringBuilder sb = new StringBuilder();
         sb.append("height=").append(height).append("|");
         sb.append("ts=").append(ts.toString()).append("|");
@@ -230,7 +229,6 @@ public class LedgerService {
         sb.append("proposer=").append(proposer).append("|");
         sb.append("evidences=");
 
-        // Orden determinista por evidenceId (o por hash si prefieres)
         List<EvidenceRecord> sorted = new ArrayList<>(evidences);
         sorted.sort(Comparator.comparing(EvidenceRecord::evidenceId));
 
@@ -247,7 +245,6 @@ public class LedgerService {
             sb.append(e.storageUri() == null ? "" : e.storageUri()).append(",");
             sb.append(e.createdAt().toString()).append(",");
 
-            // standards ordenadas
             List<String> std = e.standards() == null ? List.of() : e.standards();
             List<String> stdSorted = new ArrayList<>(std);
             stdSorted.sort(String::compareTo);

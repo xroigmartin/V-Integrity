@@ -1,4 +1,4 @@
-package xavierroigmartin.v_integrity.application;
+package xavierroigmartin.v_integrity.infrastructure.adapter;
 
 import org.junit.jupiter.api.Test;
 import java.nio.charset.StandardCharsets;
@@ -8,9 +8,9 @@ import java.util.Base64;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class CryptoServiceTest {
+class CryptoAdapterTest {
 
-    private final CryptoService cryptoService = new CryptoService();
+    private final CryptoAdapter cryptoAdapter = new CryptoAdapter();
 
     @Test
     void should_sign_and_verify_correctly() throws Exception {
@@ -23,8 +23,8 @@ class CryptoServiceTest {
         byte[] message = "Hello Blockchain".getBytes(StandardCharsets.UTF_8);
 
         // When
-        String signature = cryptoService.signEd25519(message, privateKeyBase64);
-        boolean isValid = cryptoService.verifyEd25519(message, signature, publicKeyBase64);
+        String signature = cryptoAdapter.signEd25519(message, privateKeyBase64);
+        boolean isValid = cryptoAdapter.verifyEd25519(message, signature, publicKeyBase64);
 
         // Then
         assertNotNull(signature);
@@ -43,8 +43,8 @@ class CryptoServiceTest {
         byte[] alteredMessage = "Tampered".getBytes(StandardCharsets.UTF_8);
 
         // When
-        String signature = cryptoService.signEd25519(message, privateKeyBase64);
-        boolean isValid = cryptoService.verifyEd25519(alteredMessage, signature, publicKeyBase64);
+        String signature = cryptoAdapter.signEd25519(message, privateKeyBase64);
+        boolean isValid = cryptoAdapter.verifyEd25519(alteredMessage, signature, publicKeyBase64);
 
         // Then
         assertFalse(isValid);

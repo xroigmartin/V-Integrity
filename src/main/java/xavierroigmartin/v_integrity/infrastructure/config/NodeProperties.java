@@ -1,4 +1,4 @@
-package xavierroigmartin.v_integrity.config;
+package xavierroigmartin.v_integrity.infrastructure.config;
 
 import java.util.List;
 import java.util.Map;

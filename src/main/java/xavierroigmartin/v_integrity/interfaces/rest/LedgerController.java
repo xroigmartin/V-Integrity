@@ -1,6 +1,5 @@
 package xavierroigmartin.v_integrity.interfaces.rest;
 
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -14,9 +13,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import xavierroigmartin.v_integrity.application.CryptoService;
 import xavierroigmartin.v_integrity.application.LedgerService;
-import xavierroigmartin.v_integrity.config.NodeProperties;
+import xavierroigmartin.v_integrity.application.port.out.CryptoPort;
+import xavierroigmartin.v_integrity.application.port.out.NodeConfigurationPort;
 import xavierroigmartin.v_integrity.domain.Block;
 import xavierroigmartin.v_integrity.domain.EvidenceRecord;
 import xavierroigmartin.v_integrity.interfaces.rest.dto.EvidenceRequest;
@@ -27,13 +26,13 @@ import xavierroigmartin.v_integrity.interfaces.rest.dto.VerifyRequest;
 public class LedgerController {
 
     private final LedgerService ledger;
-    private final CryptoService crypto;
-    private final NodeProperties props;
+    private final CryptoPort crypto;
+    private final NodeConfigurationPort nodeConfig;
 
-    public LedgerController(LedgerService ledger, CryptoService crypto, NodeProperties props) {
+    public LedgerController(LedgerService ledger, CryptoPort crypto, NodeConfigurationPort nodeConfig) {
         this.ledger = ledger;
         this.crypto = crypto;
-        this.props = props;
+        this.nodeConfig = nodeConfig;
     }
 
     @GetMapping("/chain")
@@ -128,7 +127,7 @@ public class LedgerController {
         Block b = ep.block();
 
         // Validación explícita de firma (para “proof” en demo)
-        String pubKey = props.getAllowedNodePublicKeys().get(b.proposerNodeId());
+        String pubKey = nodeConfig.getAllowedNodePublicKeys().get(b.proposerNodeId());
         boolean signatureValid = false;
         if (pubKey != null && !pubKey.isBlank() && !"GENESIS".equals(b.proposerNodeId())) {
             signatureValid = crypto.verifyEd25519(hexToBytes(b.hash()), b.signature(), pubKey);
