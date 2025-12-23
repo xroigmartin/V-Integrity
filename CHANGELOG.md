@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.1] - 2025-05-21
+
+### Added
+- **Docker Support**: Added `Dockerfile` (multi-stage build) and `docker-compose.yml` for easy deployment.
+- **CI/CD**: Added GitHub Actions workflow for automated testing and building.
+- **Maven Wrapper**: Included Maven Wrapper for reproducible builds.
+
 ## [0.1.0] - 2025-05-21
 
 ### Added

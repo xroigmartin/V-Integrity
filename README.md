@@ -1,6 +1,6 @@
 # V-Integrity
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)
+![Version](https://img.shields.io/badge/version-0.1.1-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
 [See Changelog](CHANGELOG.md)
@@ -14,6 +14,7 @@
 - **Hexagonal Architecture**: Strictly follows Ports & Adapters pattern to decouple domain logic from infrastructure.
 - **REST API**: Provides endpoints to submit evidences, query the chain, and verify integrity.
 - **Replication**: Basic mechanism to propagate blocks to peer nodes.
+- **Docker Ready**: Includes Dockerfile and Compose for instant deployment.
 
 ## 🛠️ Tech Stack
 
@@ -21,6 +22,7 @@
 - **Framework**: Spring Boot 4
 - **Architecture**: Hexagonal (Ports & Adapters) + DDD
 - **Build Tool**: Maven
+- **Containerization**: Docker & Docker Compose
 
 ## 🏗️ Architecture
 
@@ -31,7 +33,46 @@ The project follows a strict Hexagonal Architecture:
 - **Infrastructure**: Adapters for external concerns (`CryptoAdapter`, `ReplicationAdapter`, `NodeProperties`).
 - **Interfaces**: Entry points to the application (`LedgerController`).
 
+## 🐳 Running with Docker (Recommended)
+
+You can spin up a 2-node network (Leader + Follower) instantly:
+
+1.  Ensure you have a `.env` file with your keys (see Configuration).
+2.  Run:
+    ```bash
+    docker-compose up --build
+    ```
+3.  Access nodes:
+    - **Node 1 (Leader)**: `http://localhost:8081`
+    - **Node 2 (Follower)**: `http://localhost:8082`
+
 ## ⚙️ Configuration
+
+### Generating Keys (Ed25519)
+
+Since this project uses Ed25519 signatures, you need to generate a key pair. You can use OpenSSL:
+
+1. **Generate Private Key:**
+   ```bash
+   openssl genpkey -algorithm ED25519 -out private.pem
+   ```
+
+2. **Generate Public Key:**
+   ```bash
+   openssl pkey -in private.pem -pubout -out public.pem
+   ```
+
+3. **Convert to Base64 (for configuration):**
+   - **Private Key (PKCS#8):**
+     ```bash
+     openssl pkcs8 -topk8 -inform PEM -outform DER -in private.pem -nocrypt | base64 -w 0
+     ```
+   - **Public Key (X.509):**
+     ```bash
+     openssl pkey -pubin -inform PEM -outform DER -in public.pem | base64 -w 0
+     ```
+
+Copy the Base64 outputs into your `.env` file or environment variables.
 
 ### Environment Variables
 
