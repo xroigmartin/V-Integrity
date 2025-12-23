@@ -1,3 +1,6 @@
+server:
+  port: 8081
+
 spring:
   application:
     name: v-integrity
@@ -17,3 +20,19 @@ logging:
     org.hibernate: INFO
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+ledger:
+  node:
+    nodeId: "node-1"
+    leader: true
+    peers:
+      - "http://localhost:8082"
+      - "http://localhost:8083"
+
+    # SOLO leader: privateKeyBase64 (PKCS#8)
+    # SECURITY: Never hardcode private keys. Use environment variable LEDGER_PRIVATE_KEY_BASE64
+    privateKeyBase64: "${LEDGER_PRIVATE_KEY_BASE64:}"
+
+    # Allowlist de nodos autorizados para proponer bloques (en PoC, solo el líder)
+    allowedNodePublicKeys:
+      node-1: "${LEDGER_NODE1_PUBLIC_KEY_BASE64:}"

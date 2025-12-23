@@ -1,0 +1,11 @@
+{
+  "homologationId": "HMG-2025-0001",
+  "testRunId": "RUN-0456",
+  "artifactName": "HMG-2025-0001_EMISSIONS_TEST_RUN_0456.txt",
+  "artifactType": "EMISSIONS_TEST_REPORT",
+  "hashAlgorithm": "SHA-256",
+  "hash": "<HASH_CALCULADO>",
+  "storageUri": "local://compliance-lab/reports/2025/",
+  "createdBy": "test-bench-system",
+  "standard": ["ISO 9001", "IATF 16949"]
+}

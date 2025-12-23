@@ -1,0 +1,10 @@
+server:
+  port: 8083
+
+ledger:
+  node:
+    nodeId: "node-3"
+    leader: false
+    peers: []
+    allowedNodePublicKeys:
+      node-1: "${LEDGER_NODE1_PUBLIC_KEY_BASE64:}"
