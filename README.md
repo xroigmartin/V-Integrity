@@ -3,7 +3,7 @@
 ![Version](https://img.shields.io/badge/version-0.1.1-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-[See Changelog](CHANGELOG.md)
+[See Changelog](CHANGELOG.md) | [Contributing Guide](CONTRIBUTING.md)
 
 **V-Integrity** is a backend Proof of Concept (PoC) for a blockchain-based evidence integrity system. It allows securing digital evidences (logs, reports, artifacts) in an immutable ledger, ensuring traceability and non-repudiation.
 
@@ -15,6 +15,7 @@
 - **REST API**: Provides endpoints to submit evidences, query the chain, and verify integrity.
 - **Replication**: Basic mechanism to propagate blocks to peer nodes.
 - **Docker Ready**: Includes Dockerfile and Compose for instant deployment.
+- **OpenAPI Docs**: Interactive API documentation via Swagger UI.
 
 ## 🛠️ Tech Stack
 
@@ -120,6 +121,10 @@ To run a specific node profile:
 ```
 
 ## 🔌 API Endpoints
+
+Full API documentation is available via Swagger UI when running the application:
+- **Swagger UI**: `http://localhost:8081/swagger-ui.html`
+- **OpenAPI JSON**: `http://localhost:8081/v3/api-docs`
 
 ### 1. Submit Evidence
 Registers a new evidence in the node's mempool (pending to be mined).
