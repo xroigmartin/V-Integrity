@@ -15,6 +15,7 @@
 - **REST API**: Provides endpoints to submit evidences, query the chain, and verify integrity.
 - **Replication**: Basic mechanism to propagate blocks to peer nodes.
 - **Docker Ready**: Includes Dockerfile and Compose for instant deployment.
+- **OpenAPI Docs**: Interactive API documentation via Swagger UI.
 
 ## 🛠️ Tech Stack
 
