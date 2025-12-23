@@ -115,7 +115,8 @@ Rules:
 
 The project enforces strict coding standards via **Maven Checkstyle Plugin**.
 
-- **Style Guide**: **Google Java Style** (`google_checks.xml`).
+- **Style Guide**: **Google Java Style**.
+- **Configuration**: The agent MUST respect the style defined in `style/intellij-java-google-style.xml`.
 - **Indentation**: 2 spaces (standard Google Style).
 - **Imports**: No wildcard imports (`import java.util.*` is forbidden).
 - **Naming**:
