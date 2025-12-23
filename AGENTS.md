@@ -14,15 +14,15 @@ This document is authoritative and overrides any conflicting prompt instructions
 
 This project is a **backend proof of concept (PoC)** related to **Blockchain technologies**.
 
+Current Status: **Functional PoC with In-Memory Ledger**.
+- Core logic implemented (Ledger, Block, EvidenceRecord).
+- Consensus: Leader-based (Authority) with Ed25519 signatures.
+- Networking: Basic HTTP replication.
+
 The purpose of the project is to:
 - Explore architectural patterns
 - Validate technical decisions
 - Experiment with blockchain-related concepts
-
-The business domain is intentionally undefined and may evolve.  
-The agent MUST NOT assume any specific industry, use case, or functional requirements beyond what is explicitly stated.
-
-This is a controlled PoC, not a production system, but it must still maintain strong engineering discipline.
 
 ---
 
@@ -31,8 +31,9 @@ This is a controlled PoC, not a production system, but it must still maintain st
 - Language: **Java 25**
 - Framework: **Spring Boot 4**
 - Architecture: **Hexagonal Architecture (Ports & Adapters) + DDD**
-- Database (if/when used): PostgreSQL (only if explicitly requested)
-- API Style: REST (unless explicitly requested otherwise)
+- Build: **Maven** (Wrapper `./mvnw` mandatory)
+- Containerization: **Docker** & **Docker Compose**
+- CI: **GitHub Actions**
 
 Agents MUST NOT suggest alternative stacks unless explicitly asked.
 
@@ -40,47 +41,56 @@ Agents MUST NOT suggest alternative stacks unless explicitly asked.
 
 ## Architecture Rules (Strict)
 
-### Layering
+### Layering & Packages
 
-The backend MUST follow strict separation:
+The backend MUST follow strict separation with this specific package structure:
 
-- `domain`
-- `application`
-- `infrastructure`
-- `interfaces` (REST controllers, input/output adapters)
+- `domain`: Framework-agnostic models (`Block`, `EvidenceRecord`).
+- `application`:
+    - `service`: Use cases implementation (`LedgerService`).
+    - `port.out`: Interfaces for infrastructure dependencies (`CryptoPort`, `ReplicationPort`).
+- `infrastructure`:
+    - `adapter`: Implementations of output ports (`CryptoAdapter`, `ReplicationAdapter`).
+    - `config`: Spring configuration classes.
+- `interfaces`:
+    - `rest`: Controllers, DTOs, and Exception Handlers.
 
-Rules:
-- The **domain layer** must be framework-agnostic
-- No Spring annotations in the domain
-- The application layer orchestrates use cases (ports in / ports out)
-- Infrastructure implements ports and integrations (DB, blockchain clients, messaging, etc.)
-- Interfaces translate external input/output only (HTTP, CLI, etc.)
-- No layer violations are allowed
+### Configuration Pattern
+
+- **Configuration classes** (e.g., `@ConfigurationProperties`) MUST reside in `infrastructure/config`.
+- They MUST implement an **Output Port** defined in `application.port.out`.
+- The Application layer MUST depend only on the Port, never on the concrete Configuration class.
 
 ### Domain-Driven Design (DDD)
 
-- Aggregates must be explicit where relevant
-- Invariants must be enforced in domain objects and/or use cases
-- Entities and Value Objects must be clearly separated
-- Value Objects must be immutable
-- Prefer domain events for cross-aggregate communication (only when useful)
-
-DTOs:
-- Are not domain models
-- Must not leak into the domain layer
+- Aggregates must be explicit where relevant.
+- Invariants must be enforced in domain objects and/or use cases.
+- Entities and Value Objects must be clearly separated.
+- Value Objects must be immutable (Java `record` preferred).
 
 ---
 
-## Validation & Business Rules
+## Security Standards (Critical)
 
-- **Business validation belongs to use cases and/or domain invariants**
-- Persistence layer MUST NOT contain business validation
-- Controllers validate only technical concerns (format, required fields, authentication/authorization)
+### General & Secrets
+- **Zero Trust in Code**: Never hardcode private keys, passwords, or secrets.
+- **Environment Variables**: Use `${VAR_NAME}` placeholders.
+- **Local Development**: Use a `.env` file (strictly ignored by git).
 
-Validation failures must be:
-- Explicit
-- Deterministic
-- Mapped to a stable error model (if an error model exists in the project)
+### Application Security (OWASP)
+- **Input Validation**: All external inputs (REST, CLI) must be strictly validated using Bean Validation (`@Valid`, `@NotBlank`) before processing.
+- **Error Handling**: Never leak stack traces or internal details to the client. Use `GlobalExceptionHandler`.
+- **Injection Prevention**: Although no DB is currently used, any future persistence must use parameterized queries.
+- **Dependencies**: Keep dependencies updated to avoid known vulnerabilities (CVEs).
+
+### Blockchain Security
+- **Cryptographic Integrity**:
+    - Signing: **Ed25519** (Standard).
+    - Hashing: **SHA-256** (Standard).
+    - Custom cryptography is **strictly forbidden**.
+- **Signature Verification**: Must occur **before** any business logic or state change.
+- **Determinism**: Block hash calculation must be deterministic (Canonicalization of fields is mandatory).
+- **Immutability**: The ledger must be append-only. History rewriting is forbidden in the domain logic.
 
 ---
 
@@ -90,118 +100,46 @@ Validation failures must be:
 
 For changes that affect behavior (new features, bug fixes), the agent SHOULD default to TDD:
 
-1. **Red**: Write a failing test that captures the expected behavior
-2. **Green**: Implement the minimal code to make the test pass
-3. **Refactor**: Improve structure without changing behavior (tests must remain green)
+1. **Red**: Write a failing test that captures the expected behavior.
+2. **Green**: Implement the minimal code to make the test pass.
+3. **Refactor**: Improve structure without changing behavior.
 
 Rules:
-- Tests must be meaningful and focused
-- Tests must assert behavior, not implementation details
-- Tests are required for:
-    - Use cases
-    - Domain services
-    - Domain invariants and policies
-    - Adapters with non-trivial behavior (mappers, clients, parsers)
-
-### BDD (Behavior-Driven Development)
-
-When requirements are expressed as user behavior, the agent MUST provide (or propose) BDD-style specifications:
-
-- Use **Given / When / Then** format
-- Focus on externally observable behavior
-- Keep scenarios small and unambiguous
-
-BDD expectations:
-- Scenarios must map to a clear use case boundary
-- Scenarios should highlight edge cases and error paths
-- The agent may implement BDD as:
-    - Gherkin feature files (if the project uses them), or
-    - Plain-text scenarios in PR descriptions / documentation, or
-    - Parameterized tests structured as Given/When/Then
-
-If the project has no BDD tooling configured, the agent MUST still express acceptance criteria using Given/When/Then.
+- **Unit Tests**: JUnit 5 + Mockito.
+- **Scope**: Domain logic, Application Services, and Adapters.
+- **Isolation**: Unit tests for Application Services should Mock the Ports.
 
 ---
 
-## Testing Rules
+## Coding Standards & Style
 
-Testing is mandatory for all business-relevant behavior.
+The project enforces strict coding standards via **Maven Checkstyle Plugin**.
 
-### Unit Tests (Default)
+- **Style Guide**: **Google Java Style** (`google_checks.xml`).
+- **Indentation**: 2 spaces (standard Google Style).
+- **Imports**: No wildcard imports (`import java.util.*` is forbidden).
+- **Naming**:
+    - Classes: `PascalCase`
+    - Methods/Variables: `camelCase`
+    - Constants: `UPPER_SNAKE_CASE`
+- **JavaDoc**: Mandatory for all public classes and interfaces.
 
-- Required for:
-    - Use cases
-    - Domain services
-    - Domain logic and invariants
-- Tools:
-    - JUnit (version as per project)
-    - Mockito (only at boundaries)
-
-Rules:
-- Do NOT load Spring context unless explicitly required
-- Mocks are allowed only for:
-    - Ports (repositories, external clients)
-    - Time/UUID providers (if abstracted)
-- Prefer fakes/in-memory adapters over heavy mocking when appropriate
-
-### Integration Tests (When Needed)
-
-Allowed when:
-- Testing Spring configuration wiring
-- Testing persistence mappings
-- Testing blockchain client integration boundaries
-- Verifying adapter behavior with real serialization/deserialization
-
-Rules:
-- Keep integration tests deterministic and isolated
-- Avoid external network calls unless explicitly requested
-- Prefer containers/emulators only if already in the project setup
-
-### Change Discipline
-
-- If behavior changes: update/add tests accordingly
-- If refactoring only: tests must remain green and coverage must not regress
+The agent MUST ensure that any generated code complies with these rules to avoid breaking the CI build.
 
 ---
 
-## Coding Standards
+## Documentation & Language
 
-### General
-
-- Explicit naming over abbreviations
-- No magic values (extract constants)
-- No commented-out code
-- No unused code or imports
-- Deterministic formatting
-
-### Java
-
-- Follow SOLID strictly
-- Prefer composition over inheritance
-- Avoid static state and hidden singletons
-- Constructors/factories enforce invariants
-- Exceptions must be meaningful (domain/application specific)
-- Avoid generic `RuntimeException` unless wrapping is explicitly justified
+- **Language**: All code, comments, JavaDoc, and commit messages MUST be in **English**.
+- **JavaDoc**:
+    - Mandatory for **all Interfaces (Ports)**.
+    - Mandatory for **Public Methods** in Services and Adapters.
+    - Must explain the "What" and "Why", not just the "How".
+- **README**: Must be kept up-to-date with new endpoints, configuration steps, or key generation guides.
 
 ---
 
-## Logging, Security & Data Protection
-
-- Sensitive data must never be logged in plain text
-- Prefer structured logging where helpful
-- Security decisions must be explicit and documented
-- Cryptography must use standard libraries and modern algorithms
-- Custom cryptography is forbidden
-
-If blockchain keys, seeds, or credentials appear in the project:
-- Treat them as secrets
-- Never hardcode them
-- Never print them
-- Prefer environment-based configuration or secret managers (as applicable to a PoC)
-
----
-
-## Output & Documentation Expectations
+## Output Expectations
 
 Every agent response that proposes or provides changes MUST include:
 
@@ -211,31 +149,9 @@ Every agent response that proposes or provides changes MUST include:
 - Test impact (added/updated tests)
 
 When modifying existing code:
-- Respect existing structure
-- Avoid scope creep
-- Do not perform unrelated refactors
-- If the user is manually applying changes, clearly mark:
-    - New blocks
-    - Modified blocks
-    - Removed blocks
-
-Large code generation is forbidden unless explicitly requested.
-
----
-
-## Interaction Rules
-
-The agent MUST:
-- Work incrementally
-- Avoid assumptions
-- Ask clarification questions only when strictly necessary
-- Prefer explicit trade-offs when multiple valid options exist
-
-The agent MUST NOT:
-- Invent requirements
-- Assume a specific business domain or user story
-- Introduce hidden coupling
-- Expand scope beyond the user request
+- Respect existing structure.
+- Avoid scope creep.
+- Do not perform unrelated refactors.
 
 ---
 
@@ -243,22 +159,11 @@ The agent MUST NOT:
 
 If the agent cannot comply with any rule:
 
-1. Explicitly state the conflict
-2. Explain why compliance is not possible
-3. Provide a compliant alternative
+1. Explicitly state the conflict.
+2. Explain why compliance is not possible.
+3. Provide a compliant alternative.
 
 Silent deviation is considered a failure.
-
----
-
-## Versioning
-
-This file is versioned with the repository.
-
-Any modification to `AGENTS.md` must be:
-- Explicit
-- Justified
-- Reviewed
 
 ---
 
