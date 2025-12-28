@@ -136,6 +136,10 @@ The agent MUST ensure that any generated code complies with these rules to avoid
     - Mandatory for **all Interfaces (Ports)**.
     - Mandatory for **Public Methods** in Services and Adapters.
     - Must explain the "What" and "Why", not just the "How".
+- **OpenAPI (Swagger)**:
+    - Mandatory for **all REST Controllers**.
+    - Every endpoint must be annotated with `@Operation` and `@ApiResponse`.
+    - DTOs must use `@Schema` where necessary to clarify fields.
 - **README**: Must be kept up-to-date with new endpoints, configuration steps, or key generation guides.
 
 ---
