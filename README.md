@@ -1,6 +1,6 @@
 # V-Integrity
 
-![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)
+![Version](https://img.shields.io/badge/version-0.2.0--SNAPSHOT-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
 [See Changelog](CHANGELOG.md) | [Contributing Guide](CONTRIBUTING.md)
@@ -16,6 +16,7 @@
 - **Replication & Sync**:
     - **Push**: Real-time block propagation to peers.
     - **Pull (Catch-up)**: Synchronization mechanism for nodes recovering from downtime.
+    - **Auto-Sync**: Nodes automatically sync with peers on startup.
 - **Docker Ready**: Includes Dockerfile and Compose for instant deployment.
 - **OpenAPI Docs**: Interactive API documentation via Swagger UI.
 
@@ -33,7 +34,7 @@ The project follows a strict Hexagonal Architecture:
 
 - **Domain**: Core business logic and models (`Block`, `EvidenceRecord`). Framework-agnostic.
 - **Application**: Use cases and Ports (`LedgerService`, `SyncService`, `CryptoPort`).
-- **Infrastructure**: Adapters for external concerns (`CryptoAdapter`, `ReplicationAdapter`, `SyncAdapter`).
+- **Infrastructure**: Adapters for external concerns (`CryptoAdapter`, `ReplicationAdapter`, `SyncAdapter`, `AutoSyncAdapter`).
 - **Interfaces**: Entry points to the application (`LedgerController`).
 
 ## 🐳 Running with Docker (Recommended)
