@@ -7,6 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import xavierroigmartin.v_integrity.application.port.out.CryptoPort;
 import xavierroigmartin.v_integrity.application.port.out.HashingPort;
+import xavierroigmartin.v_integrity.application.port.out.LogPort;
 import xavierroigmartin.v_integrity.application.port.out.NodeConfigurationPort;
 import xavierroigmartin.v_integrity.application.port.out.ReplicationPort;
 import xavierroigmartin.v_integrity.domain.Block;
@@ -32,6 +33,8 @@ class LedgerServiceTest {
     private NodeConfigurationPort nodeConfig;
     @Mock
     private ReplicationPort replication;
+    @Mock
+    private LogPort logger;
 
     private LedgerService ledgerService;
     private CryptoPort crypto;
@@ -57,7 +60,7 @@ class LedgerServiceTest {
         lenient().when(nodeConfig.getNodeId()).thenReturn(myNodeId);
         lenient().when(nodeConfig.getAllowedNodePublicKeys()).thenReturn(Map.of(myNodeId, myPublicKey));
         
-        ledgerService = new LedgerService(nodeConfig, hashing, crypto, replication);
+        ledgerService = new LedgerService(nodeConfig, hashing, crypto, replication, logger);
     }
 
     @Test
@@ -76,6 +79,9 @@ class LedgerServiceTest {
         assertEquals(1, ledgerService.mempool().size());
         assertEquals(evidence.evidenceId(), submitted.evidenceId());
         assertEquals("SHA-256", submitted.hashAlgorithm()); // Normalized
+        
+        // Verify logging
+        verify(logger).logBusinessEvent(eq("EVIDENCE_SUBMITTED"), anyMap());
     }
 
     @Test
@@ -99,6 +105,9 @@ class LedgerServiceTest {
         // Verify replication was called
         verify(replication).replicateBlockToPeers(eq(block), anyList());
         
+        // Verify logging
+        verify(logger).logBusinessEvent(eq("BLOCK_COMMITTED"), anyMap());
+        
         // Mempool should be empty
         assertTrue(ledgerService.mempool().isEmpty());
         assertEquals(2, ledgerService.chain().size()); // Genesis + 1
@@ -121,7 +130,7 @@ class LedgerServiceTest {
         Block validBlock = ledgerService.commitAsLeader();
 
         // Reset service to simulate a follower receiving this block
-        LedgerService followerService = new LedgerService(nodeConfig, hashing, crypto, replication);
+        LedgerService followerService = new LedgerService(nodeConfig, hashing, crypto, replication, logger);
         
         // When
         followerService.acceptReplicatedBlock(validBlock);
@@ -129,6 +138,9 @@ class LedgerServiceTest {
         // Then
         assertEquals(2, followerService.chain().size());
         assertEquals(validBlock, followerService.chain().get(1));
+        
+        // Verify logging: 1 submit + 1 commit + 1 accept = 3 times
+        verify(logger, times(3)).logBusinessEvent(anyString(), anyMap());
     }
 
     @Test
@@ -150,10 +162,13 @@ class LedgerServiceTest {
                 validBlock.signature()
         );
 
-        LedgerService followerService = new LedgerService(nodeConfig, hashing, crypto, replication);
+        LedgerService followerService = new LedgerService(nodeConfig, hashing, crypto, replication, logger);
 
         // When/Then
         assertThrows(IllegalArgumentException.class, () -> followerService.acceptReplicatedBlock(tamperedBlock));
+        
+        // Verify error logging
+        verify(logger).logBusinessError(eq("INVALID_BLOCK_HASH"), anyString(), anyMap());
     }
 
     private EvidenceRecord createSampleEvidence() {
