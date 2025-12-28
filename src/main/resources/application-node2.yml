@@ -5,6 +5,7 @@ ledger:
   node:
     nodeId: "node-2"
     leader: false
-    peers: []
+    peers:
+      - "http://localhost:8081"
     allowedNodePublicKeys:
       node-1: "${LEDGER_NODE1_PUBLIC_KEY_BASE64:}"

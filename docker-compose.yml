@@ -8,7 +8,7 @@ services:
       - SERVER_PORT=8081
       - LEDGER_NODE_NODEID=node-1
       - LEDGER_NODE_LEADER=true
-      - LEDGER_NODE_PEERS=http://node-2:8082
+      - LEDGER_NODE_PEERS=http://node-2:8082,http://node-3:8083
       # Secrets loaded from local .env file
       - LEDGER_PRIVATE_KEY_BASE64=${LEDGER_PRIVATE_KEY_BASE64}
       - LEDGER_NODE1_PUBLIC_KEY_BASE64=${LEDGER_NODE1_PUBLIC_KEY_BASE64}
@@ -26,6 +26,23 @@ services:
       - LEDGER_NODE_LEADER=false
       - LEDGER_NODE_PEERS=http://node-1:8081
       # Node 2 needs public key to verify blocks
+      - LEDGER_NODE1_PUBLIC_KEY_BASE64=${LEDGER_NODE1_PUBLIC_KEY_BASE64}
+    networks:
+      - blockchain-net
+    depends_on:
+      - node-1
+
+  node-3:
+    build: .
+    container_name: v-integrity-node-3
+    ports:
+      - "8083:8083"
+    environment:
+      - SERVER_PORT=8083
+      - LEDGER_NODE_NODEID=node-3
+      - LEDGER_NODE_LEADER=false
+      - LEDGER_NODE_PEERS=http://node-1:8081
+      # Node 3 needs public key to verify blocks
       - LEDGER_NODE1_PUBLIC_KEY_BASE64=${LEDGER_NODE1_PUBLIC_KEY_BASE64}
     networks:
       - blockchain-net

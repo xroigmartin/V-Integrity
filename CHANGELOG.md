@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2025-05-21
+
+### Added
+- **Block Synchronization (Catch-up)**: Implemented a pull-based mechanism (`SyncService`) to allow follower nodes to recover missing blocks after downtime.
+- **Sync Endpoints**:
+  - `GET /api/blocks/latest`: Returns lightweight block header for state comparison.
+  - `GET /api/blocks`: Returns a range of blocks (pagination support).
+  - `POST /api/sync`: Manually triggers the synchronization process.
+- **Idempotency**: Enhanced `LedgerService` to safely handle duplicate blocks during sync.
+- **Docker Network**: Updated `docker-compose.yml` to include a 3rd node and fixed internal networking aliases.
+
+### Fixed
+- **Docker Permissions**: Updated `Dockerfile` to create and assign permissions to the `logs` directory for the non-root user.
+- **Peer Configuration**: Correctly configured peer URLs in `application-node2.yml` and `application-node3.yml`.
+
 ## [0.1.1] - 2025-05-21
 
 ### Added
