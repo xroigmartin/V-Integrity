@@ -64,6 +64,39 @@ public class LedgerService {
   }
 
   /**
+   * Returns the latest block in the chain.
+   *
+   * @return The most recent block.
+   */
+  public synchronized Block latestBlock() {
+    return latest();
+  }
+
+  /**
+   * Retrieves a range of blocks starting from a specific height.
+   *
+   * @param fromHeightInclusive The starting height (inclusive).
+   * @param limit               The maximum number of blocks to return.
+   * @return A list of blocks.
+   */
+  public synchronized List<Block> getBlocksFromHeight(long fromHeightInclusive, int limit) {
+    if (fromHeightInclusive < 0) {
+      throw new IllegalArgumentException("fromHeight must be >= 0");
+    }
+    if (limit <= 0) {
+      limit = 100;
+    }
+
+    int startIndex = (int) fromHeightInclusive;
+    if (startIndex >= chain.size()) {
+      return List.of();
+    }
+
+    int endIndex = Math.min(startIndex + limit, chain.size());
+    return new ArrayList<>(chain.subList(startIndex, endIndex));
+  }
+
+  /**
    * Returns a read-only copy of the current mempool (pending evidences).
    *
    * @return List of pending evidences.
@@ -185,6 +218,29 @@ public class LedgerService {
    */
   public synchronized void acceptReplicatedBlock(Block incoming) {
     Block prev = latest();
+
+    // Idempotency check: if we already have this block (same height, same hash), ignore it.
+    if (incoming.height() <= prev.height()) {
+      if (incoming.height() == prev.height() && incoming.hash().equals(prev.hash())) {
+        logger.logBusinessEvent("BLOCK_IGNORED", Map.of(
+            "reason", "Already exists",
+            "height", incoming.height()
+        ));
+        return;
+      }
+      // If height is lower or same but different hash -> Fork or old block.
+      // For PoC we just reject if it doesn't match next height.
+      // But the user asked for idempotency.
+      // If incoming.height <= prev.height(), we can check if chain.get(incoming.height) matches.
+      Block existing = chain.get((int) incoming.height());
+      if (existing.hash().equals(incoming.hash())) {
+         // Already have it
+         return;
+      } else {
+         // Conflict/Fork
+         throw new IllegalArgumentException("Block height " + incoming.height() + " already exists with different hash.");
+      }
+    }
 
     if (incoming.height() != prev.height() + 1) {
       String msg =

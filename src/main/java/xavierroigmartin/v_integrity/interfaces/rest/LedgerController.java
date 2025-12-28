@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -16,14 +17,19 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import xavierroigmartin.v_integrity.application.LedgerService;
+import xavierroigmartin.v_integrity.application.SyncService;
 import xavierroigmartin.v_integrity.application.port.out.CryptoPort;
 import xavierroigmartin.v_integrity.application.port.out.NodeConfigurationPort;
 import xavierroigmartin.v_integrity.domain.Block;
 import xavierroigmartin.v_integrity.domain.EvidenceRecord;
+import xavierroigmartin.v_integrity.interfaces.rest.dto.BlockHeaderResponse;
 import xavierroigmartin.v_integrity.interfaces.rest.dto.EvidenceRequest;
+import xavierroigmartin.v_integrity.interfaces.rest.dto.SyncRequest;
+import xavierroigmartin.v_integrity.interfaces.rest.dto.SyncResponse;
 import xavierroigmartin.v_integrity.interfaces.rest.dto.VerifyRequest;
 
 /**
@@ -36,6 +42,7 @@ import xavierroigmartin.v_integrity.interfaces.rest.dto.VerifyRequest;
  *     <li>Committing blocks (Leader only).</li>
  *     <li>Receiving replicated blocks (Followers).</li>
  *     <li>Verifying evidences and chain integrity.</li>
+ *     <li>Synchronizing with other nodes.</li>
  * </ul>
  */
 @RestController
@@ -44,11 +51,13 @@ import xavierroigmartin.v_integrity.interfaces.rest.dto.VerifyRequest;
 public class LedgerController {
 
   private final LedgerService ledger;
+  private final SyncService syncService;
   private final CryptoPort crypto;
   private final NodeConfigurationPort nodeConfig;
 
-  public LedgerController(LedgerService ledger, CryptoPort crypto, NodeConfigurationPort nodeConfig) {
+  public LedgerController(LedgerService ledger, SyncService syncService, CryptoPort crypto, NodeConfigurationPort nodeConfig) {
     this.ledger = ledger;
+    this.syncService = syncService;
     this.crypto = crypto;
     this.nodeConfig = nodeConfig;
   }
@@ -63,6 +72,53 @@ public class LedgerController {
   @GetMapping("/chain")
   public Map<String, Object> chain() {
     return Map.of("length", ledger.chain().size(), "chain", ledger.chain());
+  }
+
+  /**
+   * Retrieves the latest block header information.
+   * Useful for peers to check if they are behind.
+   *
+   * @return The latest block header.
+   */
+  @Operation(summary = "Get Latest Block Header", description = "Returns the header of the latest block.")
+  @GetMapping("/blocks/latest")
+  public BlockHeaderResponse getLatestBlock() {
+    Block latest = ledger.latestBlock();
+    return new BlockHeaderResponse(
+        latest.height(),
+        latest.hash(),
+        latest.proposerNodeId(),
+        latest.timestamp()
+    );
+  }
+
+  /**
+   * Retrieves a range of blocks.
+   * Used by peers during synchronization.
+   *
+   * @param fromHeight Starting height (inclusive).
+   * @param limit      Max number of blocks (default 100).
+   * @return List of blocks.
+   */
+  @Operation(summary = "Get Blocks Range", description = "Returns a list of blocks starting from a specific height.")
+  @GetMapping("/blocks")
+  public List<Block> getBlocks(
+      @RequestParam(defaultValue = "0") long fromHeight,
+      @RequestParam(defaultValue = "100") int limit) {
+    return ledger.getBlocksFromHeight(fromHeight, limit);
+  }
+
+  /**
+   * Triggers a manual synchronization process.
+   *
+   * @param req Optional request containing the source peer URL.
+   * @return The result of the synchronization.
+   */
+  @Operation(summary = "Trigger Sync", description = "Manually triggers synchronization with a peer.")
+  @PostMapping("/sync")
+  public SyncResponse sync(@RequestBody(required = false) SyncRequest req) {
+    String peerUrl = (req != null) ? req.sourcePeerUrl() : null;
+    return syncService.synchronize(peerUrl);
   }
 
   /**

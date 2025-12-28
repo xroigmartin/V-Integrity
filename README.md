@@ -1,6 +1,6 @@
 # V-Integrity
 
-![Version](https://img.shields.io/badge/version-0.1.1-blue.svg)
+![Version](https://img.shields.io/badge/version-0.2.0--SNAPSHOT-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
 [See Changelog](CHANGELOG.md) | [Contributing Guide](CONTRIBUTING.md)
@@ -13,7 +13,10 @@
 - **Digital Signatures**: Uses **Ed25519** for signing blocks and verifying proposer identity.
 - **Hexagonal Architecture**: Strictly follows Ports & Adapters pattern to decouple domain logic from infrastructure.
 - **REST API**: Provides endpoints to submit evidences, query the chain, and verify integrity.
-- **Replication**: Basic mechanism to propagate blocks to peer nodes.
+- **Replication & Sync**:
+    - **Push**: Real-time block propagation to peers.
+    - **Pull (Catch-up)**: Synchronization mechanism for nodes recovering from downtime.
+    - **Auto-Sync**: Nodes automatically sync with peers on startup.
 - **Docker Ready**: Includes Dockerfile and Compose for instant deployment.
 - **OpenAPI Docs**: Interactive API documentation via Swagger UI.
 
@@ -30,13 +33,13 @@
 The project follows a strict Hexagonal Architecture:
 
 - **Domain**: Core business logic and models (`Block`, `EvidenceRecord`). Framework-agnostic.
-- **Application**: Use cases and Ports (`LedgerService`, `CryptoPort`, `NodeConfigurationPort`).
-- **Infrastructure**: Adapters for external concerns (`CryptoAdapter`, `ReplicationAdapter`, `NodeProperties`).
+- **Application**: Use cases and Ports (`LedgerService`, `SyncService`, `CryptoPort`).
+- **Infrastructure**: Adapters for external concerns (`CryptoAdapter`, `ReplicationAdapter`, `SyncAdapter`, `AutoSyncAdapter`).
 - **Interfaces**: Entry points to the application (`LedgerController`).
 
 ## 🐳 Running with Docker (Recommended)
 
-You can spin up a 2-node network (Leader + Follower) instantly:
+You can spin up a 3-node network (1 Leader + 2 Followers) instantly:
 
 1.  Ensure you have a `.env` file with your keys (see Configuration).
 2.  Run:
@@ -46,6 +49,7 @@ You can spin up a 2-node network (Leader + Follower) instantly:
 3.  Access nodes:
     - **Node 1 (Leader)**: `http://localhost:8081`
     - **Node 2 (Follower)**: `http://localhost:8082`
+    - **Node 3 (Follower)**: `http://localhost:8083`
 
 ## ⚙️ Configuration
 
@@ -101,6 +105,7 @@ ledger:
     leader: true
     peers:
       - "http://localhost:8082"
+      - "http://localhost:8083"
 ```
 
 **Example `application-node2.yml` (Follower Node):**
@@ -177,27 +182,37 @@ Verifies if a specific hash exists in the blockchain and returns a cryptographic
     }
     ```
 
-### 4. Get Chain
+### 4. Synchronize (Catch-up)
+Manually triggers the synchronization process to fetch missing blocks from a peer.
+
+*   **URL**: `POST /api/sync`
+*   **Body** (Optional):
+    ```json
+    {
+      "sourcePeerUrl": "http://node-1:8081"
+    }
+    ```
+*   **Response**:
+    ```json
+    {
+      "synced": true,
+      "appliedBlocks": 5,
+      "fromHeight": 10,
+      "toHeight": 15
+    }
+    ```
+
+### 5. Get Chain
 Retrieves the full local blockchain.
 
 *   **URL**: `GET /api/chain`
 *   **Response**: JSON containing the list of all blocks.
-
-### 5. Get Mempool
-Retrieves the list of pending evidences waiting to be mined.
-
-*   **URL**: `GET /api/mempool`
 
 ### 6. Validate Chain
 Checks the cryptographic integrity of the local chain (hashes and links).
 
 *   **URL**: `GET /api/validate`
 *   **Response**: `{"valid": true}`
-
-### 7. Get Evidence by Hash
-Direct lookup of an evidence by its hash.
-
-*   **URL**: `GET /api/evidences/hash/{hash}`
 
 ## 🧪 Testing
 
