@@ -109,6 +109,14 @@ Rules:
 - **Scope**: Domain logic, Application Services, and Adapters.
 - **Isolation**: Unit tests for Application Services should Mock the Ports.
 
+### Integration Tests (Mandatory)
+
+For any new feature involving REST endpoints or external communication (peers, DB):
+
+- **Tooling**: `@SpringBootTest(webEnvironment = RANDOM_PORT)` + `TestRestTemplate` or `WebTestClient`.
+- **External Dependencies**: MUST use **WireMock** to simulate peer nodes or external APIs. Do not rely on real network calls.
+- **Scope**: Verify the full flow from Controller -> Service -> Adapter.
+
 ---
 
 ## Coding Standards & Style
