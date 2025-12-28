@@ -42,3 +42,6 @@ certificates/
 ### Logs ###
 logs/
 *.log
+
+### Documentation & Temp ###
+PR.md
