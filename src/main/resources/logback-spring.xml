@@ -6,8 +6,9 @@
     <!-- Console Appender (Human readable) -->
     <appender name="Console" class="ch.qos.logback.core.ConsoleAppender">
         <layout class="ch.qos.logback.classic.PatternLayout">
+            <!-- Force UTC timezone -->
             <Pattern>
-                %d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n
+                %d{yyyy-MM-dd HH:mm:ss, UTC} [%thread] %-5level %logger{36} - %msg%n
             </Pattern>
         </layout>
     </appender>
@@ -17,6 +18,7 @@
         <file>${LOGS}/systemLog.json</file>
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <customFields>{"log_type":"SYSTEM"}</customFields>
+            <timeZone>UTC</timeZone> <!-- Force UTC in JSON timestamp -->
         </encoder>
 
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
@@ -33,6 +35,7 @@
         <file>${LOGS}/businessLog.json</file>
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <customFields>{"log_type":"BUSINESS"}</customFields>
+            <timeZone>UTC</timeZone> <!-- Force UTC in JSON timestamp -->
         </encoder>
 
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
