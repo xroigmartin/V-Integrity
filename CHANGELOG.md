@@ -4,7 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [0.2.0] - 2025-05-21
+### Added
+- **Continuous Documentation Rules**: Updated `AGENTS.md` to mandate automatic updates of `CHANGELOG.md`, `README.md`, and `PR.md`.
+- **Mandatory Integration Tests**: Defined rules for using `@SpringBootTest` and `WireMock` for external communication tests.
+- **OpenAPI Enforcement**: Mandatory Swagger annotations for all REST endpoints.
+- **Workflow**: Added `.github/PULL_REQUEST_TEMPLATE.md` and configured `.gitignore` for local `PR.md` drafts.
+
+## [0.2.0] - 2025-12-28
 
 ### Added
 - **Block Synchronization (Catch-up)**: Implemented a pull-based mechanism (`SyncService`) to allow follower nodes to recover missing blocks after downtime.
@@ -21,7 +27,7 @@ All notable changes to this project will be documented in this file.
 - **Peer Configuration**: Correctly configured peer URLs in `application-node2.yml` and `application-node3.yml`.
 - **Startup Optimization**: Leader node now skips initial sync to avoid connection errors with followers.
 
-## [0.1.1] - 2025-05-21
+## [0.1.1] - 2025-12-24
 
 ### Added
 - **API Documentation**: Integrated Swagger/OpenAPI (SpringDoc) with detailed endpoint descriptions.
@@ -29,7 +35,7 @@ All notable changes to this project will be documented in this file.
 - **CI/CD**: Added GitHub Actions workflow for automated testing and building.
 - **Maven Wrapper**: Included Maven Wrapper for reproducible builds.
 
-## [0.1.0] - 2025-05-21
+## [0.1.0] - 2025-12-23
 
 ### Added
 - **Core Blockchain Logic**: Implemented `LedgerService` for managing blocks, evidences, and mempool.
