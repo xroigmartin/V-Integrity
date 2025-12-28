@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.2.0-SNAPSHOT] - Unreleased
+## [0.2.0] - 2025-05-21
 
 ### Added
 - **Block Synchronization (Catch-up)**: Implemented a pull-based mechanism (`SyncService`) to allow follower nodes to recover missing blocks after downtime.

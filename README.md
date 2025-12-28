@@ -1,6 +1,6 @@
 # V-Integrity
 
-![Version](https://img.shields.io/badge/version-0.2.0--SNAPSHOT-blue.svg)
+![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
 [See Changelog](CHANGELOG.md) | [Contributing Guide](CONTRIBUTING.md)
