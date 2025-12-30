@@ -9,7 +9,7 @@ All notable changes to this project will be documented in this file.
 - **Mandatory Integration Tests**: Defined rules for using `@SpringBootTest` and `WireMock` for external communication tests.
 - **OpenAPI Enforcement**: Mandatory Swagger annotations for all REST endpoints.
 - **Workflow**: Added `.github/PULL_REQUEST_TEMPLATE.md` and configured `.gitignore` for local `PR.md` drafts.
-- **Integration Tests**: Added `LedgerControllerIntegrationTest` to verify REST endpoints.
+- **Integration Tests**: Added `LedgerControllerIntegrationTest` to verify REST endpoints, including error handling scenarios.
 
 ### Fixed
 - **Dependencies**: Added `spring-boot-starter-test`, `spring-boot-resttestclient`, and `spring-boot-restclient` to `pom.xml` to resolve missing `TestRestTemplate`.
