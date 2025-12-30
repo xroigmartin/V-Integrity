@@ -1,0 +1,14 @@
+server:
+  port: 0
+
+ledger:
+  node:
+    nodeId: "node-1"
+    leader: true
+    peers: []
+    # Test keys (Ed25519) injected via Environment Variables
+    # Private Key (PKCS#8 Base64)
+    privateKeyBase64: "${TEST_LEDGER_PRIVATE_KEY_BASE64}"
+    # Public Key (X.509 Base64) corresponding to above private key
+    allowedNodePublicKeys:
+      node-1: "${TEST_LEDGER_PUBLIC_KEY_BASE64}"
