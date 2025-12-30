@@ -2,9 +2,15 @@ name: Java CI with Maven
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: 
+      - "main"
+      - "master"
+      - "prepare-v*"
   pull_request:
-    branches: [ "main", "master" ]
+    branches: 
+      - "main"
+      - "master"
+      - "prepare-v*"
 
 jobs:
   build:
