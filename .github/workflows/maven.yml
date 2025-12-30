@@ -6,11 +6,13 @@ on:
       - "main"
       - "master"
       - "prepare-v*"
+      - "*/prepare-v*"
   pull_request:
     branches: 
       - "main"
       - "master"
       - "prepare-v*"
+      - "*/prepare-v*"
 
 jobs:
   build:
