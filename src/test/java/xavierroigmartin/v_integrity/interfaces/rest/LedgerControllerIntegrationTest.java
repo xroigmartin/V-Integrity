@@ -182,6 +182,44 @@ class LedgerControllerIntegrationTest {
   }
 
   @Test
+  void shouldCommitAndVerifyEvidence() {
+    // 1. Submit evidence
+    String hash = "aaaaa6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e";
+    EvidenceRequest request = new EvidenceRequest(
+        "H-COMMIT", "TR-COMMIT", "commit.pdf", "PDF", "SHA-256", hash, 1024L, "user-commit", "s3://bucket/commit.pdf", List.of()
+    );
+    restTemplate.postForEntity("/api/evidences", request, Map.class);
+
+    // 2. Commit block (as leader)
+    ResponseEntity<Map> commitResponse = restTemplate.postForEntity(
+        "/api/blocks/commit",
+        null,
+        Map.class
+    );
+    assertThat(commitResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    assertThat(commitResponse.getBody()).containsKey("block");
+
+    // 3. Verify by hash (should be found now)
+    ResponseEntity<Map> verifyResponse = restTemplate.getForEntity(
+        "/api/evidences/hash/" + hash,
+        Map.class
+    );
+    assertThat(verifyResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(verifyResponse.getBody()).containsEntry("found", true);
+    assertThat(verifyResponse.getBody()).containsKey("proof");
+    
+    // 4. Verify endpoint
+    VerifyRequest verifyReq = new VerifyRequest(hash);
+    ResponseEntity<Map> verifyEndpointResponse = restTemplate.postForEntity(
+        "/api/verify",
+        verifyReq,
+        Map.class
+    );
+    assertThat(verifyEndpointResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(verifyEndpointResponse.getBody()).containsEntry("verified", true);
+  }
+
+  @Test
   void shouldGetLatestBlock() {
     ResponseEntity<Map> response = restTemplate.getForEntity(
         "http://localhost:" + port + "/api/blocks/latest",
