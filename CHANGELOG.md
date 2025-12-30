@@ -8,8 +8,14 @@ All notable changes to this project will be documented in this file.
 - **Continuous Documentation Rules**: Updated `AGENTS.md` to mandate automatic updates of `CHANGELOG.md`, `README.md`, and `PR.md`.
 - **Mandatory Integration Tests**: Defined rules for using `@SpringBootTest` and `WireMock` for external communication tests.
 - **OpenAPI Enforcement**: Mandatory Swagger annotations for all REST endpoints.
-- **Workflow**: Added `.github/PULL_REQUEST_TEMPLATE.md` and configured `.gitignore` for local `PR.md` drafts.
-- **Integration Tests**: Added `LedgerControllerIntegrationTest` to verify REST endpoints, including error handling scenarios.
+- **Workflow**: 
+  - Added `.github/PULL_REQUEST_TEMPLATE.md` and configured `.gitignore` for local `PR.md` drafts.
+  - Optimized GitHub Actions workflow to separate unit and integration tests, and run full verification only on Pull Requests.
+  - Added support for prefixed release branches (e.g., `chore/prepare-v*`) in CI triggers.
+- **Integration Tests**: 
+  - Added `LedgerControllerIntegrationTest` covering all public endpoints and error scenarios.
+  - Configured secure test execution using environment variables for cryptographic keys.
+- **Test Infrastructure**: Separated Unit and Integration tests execution via Maven plugins (`surefire` vs `failsafe`).
 
 ### Fixed
 - **Dependencies**: Added `spring-boot-starter-test`, `spring-boot-resttestclient`, and `spring-boot-restclient` to `pom.xml` to resolve missing `TestRestTemplate`.
