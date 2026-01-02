@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file.
   - Added `LedgerControllerIntegrationTest` covering all public endpoints and error scenarios.
   - Configured secure test execution using environment variables for cryptographic keys.
 - **Test Infrastructure**: Separated Unit and Integration tests execution via Maven plugins (`surefire` vs `failsafe`).
+- **Agent Rules**: Updated `AGENTS.md` with stricter TDD enforcement, explicit error handling standards, and context-efficient documentation rules.
 
 ### Fixed
 - **API Error Handling**: 

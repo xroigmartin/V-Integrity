@@ -83,6 +83,14 @@ The backend MUST follow strict separation with this specific package structure:
 - **Injection Prevention**: Although no DB is currently used, any future persistence must use parameterized queries.
 - **Dependencies**: Keep dependencies updated to avoid known vulnerabilities (CVEs).
 
+### Error Handling & Exceptions
+- **Global Handling**: All application errors MUST be handled by `GlobalExceptionHandler`.
+- **Custom Exceptions**: Use specific custom exceptions (e.g., `DomainException`, `ApplicationException`) for business logic failures.
+- **HTTP Status Codes**:
+    - **4xx**: For client errors, validation failures, and domain rule violations.
+    - **5xx**: STRICTLY reserved for unexpected server failures or infrastructure crashes.
+- **Avoid Generic 500**: The agent MUST ensure that predictable errors (e.g., "Item not found", "Invalid state") never result in a generic 500 Internal Server Error.
+
 ### Blockchain Security
 - **Cryptographic Integrity**:
     - Signing: **Ed25519** (Standard).
@@ -98,9 +106,9 @@ The backend MUST follow strict separation with this specific package structure:
 
 ### TDD (Test-Driven Development)
 
-For changes that affect behavior (new features, bug fixes), the agent SHOULD default to TDD:
+For changes that affect behavior (new features, bug fixes), the agent **MUST strictly follow the TDD cycle (Red-Green-Refactor)**:
 
-1. **Red**: Write a failing test that captures the expected behavior.
+1. **Red**: Write a failing test that captures the expected behavior. **The agent MUST NOT write implementation code before confirming that a test exists and fails.**
 2. **Green**: Implement the minimal code to make the test pass.
 3. **Refactor**: Improve structure without changing behavior.
 
@@ -154,7 +162,9 @@ The agent MUST ensure that any generated code complies with these rules to avoid
 
 ## Continuous Documentation & Versioning (Mandatory)
 
-The agent MUST automatically maintain the project documentation and versioning state during every interaction that involves code changes.
+The agent MUST automatically maintain the project documentation and versioning state during every interaction that involves code changes. **The agent MUST perform these updates proactively as part of the task completion, without waiting for explicit user instruction.**
+
+**Context Efficiency Exception**: To avoid polluting the LLM context, the agent SHOULD skip documentation updates for trivial changes (e.g., typos, style fixes, internal test adjustments) that do not affect the public API, behavior, or features. For functional changes, immediate update is mandatory.
 
 ### 1. Changelog Management
 - **File**: `CHANGELOG.md`
