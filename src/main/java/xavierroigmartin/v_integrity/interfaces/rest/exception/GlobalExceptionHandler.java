@@ -9,6 +9,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import xavierroigmartin.v_integrity.application.exception.ApplicationException;
+import xavierroigmartin.v_integrity.domain.exception.DomainException;
+import xavierroigmartin.v_integrity.infrastructure.exception.InfrastructureException;
 
 /**
  * Global exception handler for the REST API.
@@ -21,12 +24,46 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
   /**
-   * Handles IllegalArgumentException.
-   * Usually thrown when arguments are invalid or validation fails.
-   *
-   * @param ex      The exception thrown.
-   * @param request The HTTP request that triggered the exception.
-   * @return A ResponseEntity containing the ErrorResponse and HTTP 400 status.
+   * Handles Domain Exceptions (Business Rules).
+   * Mapped to 400 Bad Request.
+   */
+  @ExceptionHandler(DomainException.class)
+  public ResponseEntity<ErrorResponse> handleDomainException(
+      DomainException ex,
+      HttpServletRequest request) {
+
+    logger.warn("Domain Error: {}", ex.getMessage());
+    return buildResponse(ex, HttpStatus.BAD_REQUEST, request);
+  }
+
+  /**
+   * Handles Application Exceptions (Flow/State).
+   * Mapped to 400 Bad Request.
+   */
+  @ExceptionHandler(ApplicationException.class)
+  public ResponseEntity<ErrorResponse> handleApplicationException(
+      ApplicationException ex,
+      HttpServletRequest request) {
+
+    logger.warn("Application Error: {}", ex.getMessage());
+    return buildResponse(ex, HttpStatus.BAD_REQUEST, request);
+  }
+
+  /**
+   * Handles Infrastructure Exceptions (Technical Failures).
+   * Mapped to 500 Internal Server Error.
+   */
+  @ExceptionHandler(InfrastructureException.class)
+  public ResponseEntity<ErrorResponse> handleInfrastructureException(
+      InfrastructureException ex,
+      HttpServletRequest request) {
+
+    logger.error("Infrastructure Error: {}", ex.getMessage(), ex);
+    return buildResponse(ex, HttpStatus.INTERNAL_SERVER_ERROR, request);
+  }
+
+  /**
+   * Handles IllegalArgumentException (Legacy/Standard validations).
    */
   @ExceptionHandler(IllegalArgumentException.class)
   public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
@@ -34,25 +71,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
       HttpServletRequest request) {
 
     logger.warn("Bad Request: {}", ex.getMessage());
-
-    ErrorResponse errorResponse = new ErrorResponse(
-        LocalDateTime.now(),
-        HttpStatus.BAD_REQUEST.value(),
-        HttpStatus.BAD_REQUEST.getReasonPhrase(),
-        ex.getMessage(),
-        request.getRequestURI()
-    );
-
-    return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    return buildResponse(ex, HttpStatus.BAD_REQUEST, request);
   }
 
   /**
-   * Handles IllegalStateException.
-   * Usually thrown when the invoked method is not appropriate for the current state.
-   *
-   * @param ex      The exception thrown.
-   * @param request The HTTP request that triggered the exception.
-   * @return A ResponseEntity containing the ErrorResponse and HTTP 400 status.
+   * Handles IllegalStateException (Legacy/Standard state checks).
    */
   @ExceptionHandler(IllegalStateException.class)
   public ResponseEntity<ErrorResponse> handleIllegalStateException(
@@ -60,24 +83,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
       HttpServletRequest request) {
 
     logger.warn("Invalid State: {}", ex.getMessage());
-
-    ErrorResponse errorResponse = new ErrorResponse(
-        LocalDateTime.now(),
-        HttpStatus.BAD_REQUEST.value(),
-        HttpStatus.BAD_REQUEST.getReasonPhrase(),
-        ex.getMessage(),
-        request.getRequestURI()
-    );
-
-    return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    return buildResponse(ex, HttpStatus.BAD_REQUEST, request);
   }
 
   /**
    * Handles all uncaught exceptions (fallback).
-   *
-   * @param ex      The exception thrown.
-   * @param request The HTTP request that triggered the exception.
-   * @return A ResponseEntity containing the ErrorResponse and HTTP 500 status.
    */
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ErrorResponse> handleAllUncaughtException(
@@ -95,5 +105,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     );
 
     return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+  }
+
+  private ResponseEntity<ErrorResponse> buildResponse(Exception ex, HttpStatus status, HttpServletRequest request) {
+    ErrorResponse errorResponse = new ErrorResponse(
+        LocalDateTime.now(),
+        status.value(),
+        status.getReasonPhrase(),
+        ex.getMessage(),
+        request.getRequestURI()
+    );
+    return new ResponseEntity<>(errorResponse, status);
   }
 }

@@ -24,6 +24,7 @@ import xavierroigmartin.v_integrity.application.port.out.LogPort;
 import xavierroigmartin.v_integrity.application.port.out.NodeConfigurationPort;
 import xavierroigmartin.v_integrity.application.port.out.SyncPort;
 import xavierroigmartin.v_integrity.domain.Block;
+import xavierroigmartin.v_integrity.domain.exception.InvalidBlockException;
 import xavierroigmartin.v_integrity.interfaces.rest.dto.BlockHeaderResponse;
 import xavierroigmartin.v_integrity.interfaces.rest.dto.SyncResponse;
 
@@ -118,7 +119,7 @@ class SyncServiceTest {
     when(syncPort.getBlocks(peerUrl, 1, 100)).thenReturn(List.of(block1));
 
     // Simulate validation error
-    doThrow(new IllegalArgumentException("Invalid block")).when(ledgerService).acceptReplicatedBlock(block1);
+    doThrow(new InvalidBlockException("Invalid block")).when(ledgerService).acceptReplicatedBlock(block1);
 
     // When
     SyncResponse response = syncService.synchronize(null);

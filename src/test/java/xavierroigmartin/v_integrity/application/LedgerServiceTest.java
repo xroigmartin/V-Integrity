@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import xavierroigmartin.v_integrity.application.exception.NodeNotLeaderException;
 import xavierroigmartin.v_integrity.application.port.out.CryptoPort;
 import xavierroigmartin.v_integrity.application.port.out.HashingPort;
 import xavierroigmartin.v_integrity.application.port.out.LogPort;
@@ -12,6 +13,7 @@ import xavierroigmartin.v_integrity.application.port.out.NodeConfigurationPort;
 import xavierroigmartin.v_integrity.application.port.out.ReplicationPort;
 import xavierroigmartin.v_integrity.domain.Block;
 import xavierroigmartin.v_integrity.domain.EvidenceRecord;
+import xavierroigmartin.v_integrity.domain.exception.InvalidBlockException;
 import xavierroigmartin.v_integrity.infrastructure.adapter.CryptoAdapter;
 import xavierroigmartin.v_integrity.infrastructure.adapter.HashingAdapter;
 
@@ -117,7 +119,7 @@ class LedgerServiceTest {
     void should_fail_commit_if_not_leader() {
         when(nodeConfig.isLeader()).thenReturn(false);
 
-        assertThrows(IllegalStateException.class, () -> ledgerService.commitAsLeader());
+        assertThrows(NodeNotLeaderException.class, () -> ledgerService.commitAsLeader());
     }
 
     @Test
@@ -165,7 +167,7 @@ class LedgerServiceTest {
         LedgerService followerService = new LedgerService(nodeConfig, hashing, crypto, replication, logger);
 
         // When/Then
-        assertThrows(IllegalArgumentException.class, () -> followerService.acceptReplicatedBlock(tamperedBlock));
+        assertThrows(InvalidBlockException.class, () -> followerService.acceptReplicatedBlock(tamperedBlock));
         
         // Verify error logging
         verify(logger).logBusinessError(eq("INVALID_BLOCK_HASH"), anyString(), anyMap());

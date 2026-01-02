@@ -2,6 +2,7 @@ package xavierroigmartin.v_integrity.infrastructure.adapter;
 
 import org.springframework.stereotype.Component;
 import xavierroigmartin.v_integrity.application.port.out.CryptoPort;
+import xavierroigmartin.v_integrity.infrastructure.exception.CryptoOperationException;
 
 import java.security.KeyFactory;
 import java.security.PrivateKey;
@@ -33,7 +34,7 @@ public class CryptoAdapter implements CryptoPort {
             byte[] signature = sig.sign();
             return Base64.getEncoder().encodeToString(signature);
         } catch (Exception e) {
-            throw new IllegalStateException("Error signing with Ed25519", e);
+            throw new CryptoOperationException("Error signing with Ed25519", e);
         }
     }
 

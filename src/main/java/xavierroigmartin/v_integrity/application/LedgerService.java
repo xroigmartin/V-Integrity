@@ -11,6 +11,8 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.springframework.stereotype.Service;
+import xavierroigmartin.v_integrity.application.exception.MempoolEmptyException;
+import xavierroigmartin.v_integrity.application.exception.NodeNotLeaderException;
 import xavierroigmartin.v_integrity.application.port.out.CryptoPort;
 import xavierroigmartin.v_integrity.application.port.out.HashingPort;
 import xavierroigmartin.v_integrity.application.port.out.LogPort;
@@ -18,6 +20,8 @@ import xavierroigmartin.v_integrity.application.port.out.NodeConfigurationPort;
 import xavierroigmartin.v_integrity.application.port.out.ReplicationPort;
 import xavierroigmartin.v_integrity.domain.Block;
 import xavierroigmartin.v_integrity.domain.EvidenceRecord;
+import xavierroigmartin.v_integrity.domain.exception.InvalidBlockException;
+import xavierroigmartin.v_integrity.domain.exception.InvalidEvidenceException;
 
 /**
  * Core application service that manages the blockchain ledger state.
@@ -112,17 +116,17 @@ public class LedgerService {
    *
    * @param evidence The evidence record to submit.
    * @return The normalized evidence record as stored in the mempool.
-   * @throws IllegalArgumentException if the hash algorithm is not supported or the hash format is
+   * @throws InvalidEvidenceException if the hash algorithm is not supported or the hash format is
    *                                  invalid.
    */
   public EvidenceRecord submitEvidence(EvidenceRecord evidence) {
     // Minimal PoC validations
     String algo = normalizeAlgo(evidence.hashAlgorithm());
     if (!"SHA-256".equals(algo)) {
-      throw new IllegalArgumentException("Supported hashAlgorithm in PoC: SHA-256");
+      throw new InvalidEvidenceException("Supported hashAlgorithm in PoC: SHA-256");
     }
     if (!isValidHexSha256(evidence.hash())) {
-      throw new IllegalArgumentException(
+      throw new InvalidEvidenceException(
           "Invalid hash: must be a 64-character hex string (SHA-256)");
     }
 
@@ -160,12 +164,13 @@ public class LedgerService {
    * it.
    *
    * @return The newly created and committed block.
-   * @throws IllegalStateException if the node is not a leader, has no private key, or the mempool
-   *                               is empty.
+   * @throws NodeNotLeaderException if the node is not a leader.
+   * @throws MempoolEmptyException if the mempool is empty.
+   * @throws IllegalStateException if the node has no private key.
    */
   public Block commitAsLeader() {
     if (!nodeConfig.isLeader()) {
-      throw new IllegalStateException("This node is not a leader; cannot commit blocks.");
+      throw new NodeNotLeaderException("This node is not a leader; cannot commit blocks.");
     }
     if (nodeConfig.getPrivateKeyBase64() == null || nodeConfig.getPrivateKeyBase64().isBlank()) {
       throw new IllegalStateException("Missing ledger.node.privateKeyBase64 to sign blocks.");
@@ -176,7 +181,7 @@ public class LedgerService {
 
     synchronized (this) {
       if (mempool.isEmpty()) {
-        throw new IllegalStateException("No pending evidences in mempool.");
+        throw new MempoolEmptyException("No pending evidences in mempool.");
       }
 
       Block prev = latest();
@@ -214,7 +219,7 @@ public class LedgerService {
    * Followers: Receive a block already sealed by a leader, validate it, and accept it.
    *
    * @param incoming The block received from a peer.
-   * @throws IllegalArgumentException if the block is invalid (height, hash, signature, etc.).
+   * @throws InvalidBlockException if the block is invalid (height, hash, signature, etc.).
    */
   public synchronized void acceptReplicatedBlock(Block incoming) {
     Block prev = latest();
@@ -238,7 +243,7 @@ public class LedgerService {
          return;
       } else {
          // Conflict/Fork
-         throw new IllegalArgumentException("Block height " + incoming.height() + " already exists with different hash.");
+         throw new InvalidBlockException("Block height " + incoming.height() + " already exists with different hash.");
       }
     }
 
@@ -247,15 +252,15 @@ public class LedgerService {
           "Invalid Height. Expected " + (prev.height() + 1) + " but received " + incoming.height();
       logger.logBusinessError("INVALID_BLOCK_HEIGHT", msg,
           Map.of("proposer", incoming.proposerNodeId()));
-      throw new IllegalArgumentException(msg);
+      throw new InvalidBlockException(msg);
     }
     if (!Objects.equals(incoming.previousHash(), prev.hash())) {
-      throw new IllegalArgumentException("Invalid previousHash.");
+      throw new InvalidBlockException("Invalid previousHash.");
     }
 
     String pubKey = nodeConfig.getAllowedNodePublicKeys().get(incoming.proposerNodeId());
     if (pubKey == null || pubKey.isBlank()) {
-      throw new IllegalArgumentException("Unauthorized Proposer: " + incoming.proposerNodeId());
+      throw new InvalidBlockException("Unauthorized Proposer: " + incoming.proposerNodeId());
     }
 
     // Recompute hash
@@ -271,7 +276,7 @@ public class LedgerService {
     if (!Objects.equals(recomputedHash, incoming.hash())) {
       logger.logBusinessError("INVALID_BLOCK_HASH", "Hash mismatch",
           Map.of("received", incoming.hash(), "computed", recomputedHash));
-      throw new IllegalArgumentException("Invalid Hash (does not match recomputed hash).");
+      throw new InvalidBlockException("Invalid Hash (does not match recomputed hash).");
     }
 
     // Verify signature
@@ -280,7 +285,7 @@ public class LedgerService {
     if (!okSig) {
       logger.logBusinessError("INVALID_BLOCK_SIGNATURE", "Signature verification failed",
           Map.of("proposer", incoming.proposerNodeId()));
-      throw new IllegalArgumentException(
+      throw new InvalidBlockException(
           "Invalid signature for proposer " + incoming.proposerNodeId());
     }
 
