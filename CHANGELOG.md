@@ -18,6 +18,8 @@ All notable changes to this project will be documented in this file.
 - **Test Infrastructure**: Separated Unit and Integration tests execution via Maven plugins (`surefire` vs `failsafe`).
 
 ### Fixed
+- **API Error Handling**: Updated `GlobalExceptionHandler` to map `IllegalArgumentException` and `IllegalStateException` to HTTP 400 (Bad Request) instead of 500.
+- **Swagger Documentation**: Updated OpenAPI annotations in `LedgerController` to reflect correct error codes (400).
 - **Dependencies**: Added `spring-boot-starter-test`, `spring-boot-resttestclient`, and `spring-boot-restclient` to `pom.xml` to resolve missing `TestRestTemplate`.
 
 ## [0.2.0] - 2025-12-28

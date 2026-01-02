@@ -21,6 +21,58 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
   /**
+   * Handles IllegalArgumentException.
+   * Usually thrown when arguments are invalid or validation fails.
+   *
+   * @param ex      The exception thrown.
+   * @param request The HTTP request that triggered the exception.
+   * @return A ResponseEntity containing the ErrorResponse and HTTP 400 status.
+   */
+  @ExceptionHandler(IllegalArgumentException.class)
+  public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
+      IllegalArgumentException ex,
+      HttpServletRequest request) {
+
+    logger.warn("Bad Request: {}", ex.getMessage());
+
+    ErrorResponse errorResponse = new ErrorResponse(
+        LocalDateTime.now(),
+        HttpStatus.BAD_REQUEST.value(),
+        HttpStatus.BAD_REQUEST.getReasonPhrase(),
+        ex.getMessage(),
+        request.getRequestURI()
+    );
+
+    return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+  }
+
+  /**
+   * Handles IllegalStateException.
+   * Usually thrown when the invoked method is not appropriate for the current state.
+   *
+   * @param ex      The exception thrown.
+   * @param request The HTTP request that triggered the exception.
+   * @return A ResponseEntity containing the ErrorResponse and HTTP 400 status.
+   */
+  @ExceptionHandler(IllegalStateException.class)
+  public ResponseEntity<ErrorResponse> handleIllegalStateException(
+      IllegalStateException ex,
+      HttpServletRequest request) {
+
+    logger.warn("Invalid State: {}", ex.getMessage());
+
+    ErrorResponse errorResponse = new ErrorResponse(
+        LocalDateTime.now(),
+        HttpStatus.BAD_REQUEST.value(),
+        HttpStatus.BAD_REQUEST.getReasonPhrase(),
+        ex.getMessage(),
+        request.getRequestURI()
+    );
+
+    return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+  }
+
+  /**
    * Handles all uncaught exceptions (fallback).
    *
    * @param ex      The exception thrown.
