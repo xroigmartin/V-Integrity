@@ -4,6 +4,9 @@ server:
 spring:
   application:
     name: v-integrity
+  mvc:
+    problem-details:
+      enabled: true
   jackson:
     time-zone: UTC
   jpa:

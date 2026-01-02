@@ -148,13 +148,14 @@ class LedgerControllerIntegrationTest {
     );
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-    assertThat(response.getBody()).containsKey("message");
-    // We expect the message to contain details about the validation error
-    // Currently, without custom handler, Spring might return a generic message or a different structure.
-    // We want to enforce our structure.
-    String message = (String) response.getBody().get("message");
-    assertThat(message).contains("Validation failed");
-    assertThat(message).contains("hashAlgorithm");
+    // Expecting RFC 7807 Problem Details structure
+    assertThat(response.getBody()).containsKey("detail");
+    assertThat(response.getBody()).containsKey("title");
+    assertThat(response.getBody()).containsKey("status");
+    
+    String detail = (String) response.getBody().get("detail");
+    assertThat(detail).contains("Validation failed");
+    assertThat(detail).contains("hashAlgorithm");
   }
 
   @Test
@@ -181,7 +182,8 @@ class LedgerControllerIntegrationTest {
     }
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-    assertThat(response.getBody()).containsKey("message");
+    // Expecting RFC 7807 Problem Details structure
+    assertThat(response.getBody()).containsKey("detail");
   }
 
   @Test
