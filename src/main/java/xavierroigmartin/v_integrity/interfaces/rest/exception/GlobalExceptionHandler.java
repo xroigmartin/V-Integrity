@@ -2,12 +2,19 @@ package xavierroigmartin.v_integrity.interfaces.rest.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.ServletWebRequest;
+import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import xavierroigmartin.v_integrity.application.exception.ApplicationException;
 import xavierroigmartin.v_integrity.domain.exception.DomainException;
@@ -22,6 +29,37 @@ import xavierroigmartin.v_integrity.infrastructure.exception.InfrastructureExcep
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+  /**
+   * Handles validation errors (@Valid).
+   * Overrides the default Spring Boot behavior to return our standard ErrorResponse.
+   */
+  @Override
+  protected ResponseEntity<Object> handleMethodArgumentNotValid(
+      MethodArgumentNotValidException ex,
+      HttpHeaders headers,
+      HttpStatusCode status,
+      WebRequest request) {
+
+    String errors = ex.getBindingResult().getFieldErrors().stream()
+        .map(FieldError::getField)
+        .collect(Collectors.joining(", "));
+
+    String message = "Validation failed for fields: " + errors;
+    logger.warn("Validation Error: {}", message);
+
+    String path = ((ServletWebRequest) request).getRequest().getRequestURI();
+
+    ErrorResponse errorResponse = new ErrorResponse(
+        LocalDateTime.now(),
+        HttpStatus.BAD_REQUEST.value(),
+        HttpStatus.BAD_REQUEST.getReasonPhrase(),
+        message,
+        path
+    );
+
+    return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+  }
 
   /**
    * Handles Domain Exceptions (Business Rules).

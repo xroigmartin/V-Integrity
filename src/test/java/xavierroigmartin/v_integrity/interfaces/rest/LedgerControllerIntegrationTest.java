@@ -135,6 +135,29 @@ class LedgerControllerIntegrationTest {
   }
 
   @Test
+  void shouldReturnFormattedErrorForValidationFailure() {
+    // Request with missing mandatory fields (hashAlgorithm is null)
+    EvidenceRequest invalidRequest = new EvidenceRequest(
+        "H-123", "TR-456", "report.pdf", "PDF", null, "hash", 1024L, "user", "uri", List.of()
+    );
+
+    ResponseEntity<Map> response = restTemplate.postForEntity(
+        "http://localhost:" + port + "/api/evidences",
+        invalidRequest,
+        Map.class
+    );
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    assertThat(response.getBody()).containsKey("message");
+    // We expect the message to contain details about the validation error
+    // Currently, without custom handler, Spring might return a generic message or a different structure.
+    // We want to enforce our structure.
+    String message = (String) response.getBody().get("message");
+    assertThat(message).contains("Validation failed");
+    assertThat(message).contains("hashAlgorithm");
+  }
+
+  @Test
   void shouldReturnBadRequestWhenCommittingWithoutEvidences() {
     // Ensure mempool is empty (might need a way to clear it or assume test order/isolation)
     // In this simple PoC test, we just try to commit. If mempool is empty, it throws IllegalStateException.
