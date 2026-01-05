@@ -18,7 +18,7 @@ All notable changes to this project will be documented in this file.
 - **Test Infrastructure**: Separated Unit and Integration tests execution via Maven plugins (`surefire` vs `failsafe`).
 - **Agent Rules**: Updated `AGENTS.md` with stricter TDD enforcement, explicit error handling standards (RFC 7807), context-efficient documentation rules, and mandatory HTTP file tests.
 - **Error Codes**: Introduced standard application error codes (e.g., `ERR_VALIDATION`, `ERR_BLOCK_INVALID`) in API responses.
-- **HTTP Tests**: Added `api-tests.http` for manual and automated API verification via IntelliJ HTTP Client.
+- **HTTP Tests**: Added domain-specific HTTP test files (`api-evidences.http`, `api-blocks.http`, `api-node-ops.http`) covering all endpoints.
 
 ### Fixed
 - **API Error Handling**: 
