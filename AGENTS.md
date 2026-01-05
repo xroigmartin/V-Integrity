@@ -127,6 +127,10 @@ For any new feature involving REST endpoints or external communication (peers, D
 - **External Dependencies**: MUST use **WireMock** to simulate peer nodes or external APIs. Do not rely on real network calls.
 - **Scope**: Verify the full flow from Controller -> Service -> Adapter.
 
+### HTTP Client Tests (Mandatory)
+
+For any new REST endpoint or API change, the agent **MUST** create or update an IntelliJ HTTP Client file (e.g., `api-tests.http`) to facilitate manual verification.
+
 ---
 
 ## Coding Standards & Style

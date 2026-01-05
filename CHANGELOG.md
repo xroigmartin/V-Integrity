@@ -16,8 +16,9 @@ All notable changes to this project will be documented in this file.
   - Added `LedgerControllerIntegrationTest` covering all public endpoints and error scenarios.
   - Configured secure test execution using environment variables for cryptographic keys.
 - **Test Infrastructure**: Separated Unit and Integration tests execution via Maven plugins (`surefire` vs `failsafe`).
-- **Agent Rules**: Updated `AGENTS.md` with stricter TDD enforcement, explicit error handling standards (RFC 7807), and context-efficient documentation rules.
+- **Agent Rules**: Updated `AGENTS.md` with stricter TDD enforcement, explicit error handling standards (RFC 7807), context-efficient documentation rules, and mandatory HTTP file tests.
 - **Error Codes**: Introduced standard application error codes (e.g., `ERR_VALIDATION`, `ERR_BLOCK_INVALID`) in API responses.
+- **HTTP Tests**: Added `api-tests.http` for manual and automated API verification via IntelliJ HTTP Client.
 
 ### Fixed
 - **API Error Handling**: 
