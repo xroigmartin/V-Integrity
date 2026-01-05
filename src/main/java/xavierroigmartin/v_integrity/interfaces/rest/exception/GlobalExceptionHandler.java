@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import xavierroigmartin.v_integrity.application.exception.AppErrorCodes;
 import xavierroigmartin.v_integrity.application.exception.ApplicationException;
 import xavierroigmartin.v_integrity.domain.exception.DomainException;
 import xavierroigmartin.v_integrity.infrastructure.exception.InfrastructureException;
@@ -52,6 +53,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, message);
     problem.setTitle("Validation Failed");
     problem.setProperty("timestamp", LocalDateTime.now());
+    problem.setProperty("errorCode", AppErrorCodes.ERR_VALIDATION);
 
     return createResponseEntity(problem, headers, status, request);
   }
@@ -63,7 +65,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   @ExceptionHandler(DomainException.class)
   public ProblemDetail handleDomainException(DomainException ex) {
     logger.warn("Domain Error: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), ex.getErrorCode());
   }
 
   /**
@@ -73,7 +75,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   @ExceptionHandler(ApplicationException.class)
   public ProblemDetail handleApplicationException(ApplicationException ex) {
     logger.warn("Application Error: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), ex.getErrorCode());
   }
 
   /**
@@ -83,7 +85,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   @ExceptionHandler(InfrastructureException.class)
   public ProblemDetail handleInfrastructureException(InfrastructureException ex) {
     logger.error("Infrastructure Error: {}", ex.getMessage(), ex);
-    return buildProblemDetail(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+    return buildProblemDetail(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), AppErrorCodes.ERR_INFRASTRUCTURE);
   }
 
   /**
@@ -92,7 +94,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   @ExceptionHandler(IllegalArgumentException.class)
   public ProblemDetail handleIllegalArgumentException(IllegalArgumentException ex) {
     logger.warn("Bad Request: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), AppErrorCodes.ERR_VALIDATION);
   }
 
   /**
@@ -101,7 +103,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   @ExceptionHandler(IllegalStateException.class)
   public ProblemDetail handleIllegalStateException(IllegalStateException ex) {
     logger.warn("Invalid State: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), AppErrorCodes.ERR_APPLICATION_STATE);
   }
 
   /**
@@ -110,12 +112,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   @ExceptionHandler(Exception.class)
   public ProblemDetail handleAllUncaughtException(Exception ex, HttpServletRequest request) {
     logger.error("Uncaught exception processing request: {}", request.getRequestURI(), ex);
-    return buildProblemDetail(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+    return buildProblemDetail(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), AppErrorCodes.ERR_UNEXPECTED);
   }
 
-  private ProblemDetail buildProblemDetail(HttpStatus status, String detail) {
+  private ProblemDetail buildProblemDetail(HttpStatus status, String detail, String errorCode) {
     ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
     problem.setProperty("timestamp", LocalDateTime.now());
+    problem.setProperty("errorCode", errorCode);
     return problem;
   }
 }

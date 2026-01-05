@@ -17,6 +17,7 @@ All notable changes to this project will be documented in this file.
   - Configured secure test execution using environment variables for cryptographic keys.
 - **Test Infrastructure**: Separated Unit and Integration tests execution via Maven plugins (`surefire` vs `failsafe`).
 - **Agent Rules**: Updated `AGENTS.md` with stricter TDD enforcement, explicit error handling standards (RFC 7807), and context-efficient documentation rules.
+- **Error Codes**: Introduced standard application error codes (e.g., `ERR_VALIDATION`, `ERR_BLOCK_INVALID`) in API responses.
 
 ### Fixed
 - **API Error Handling**: 
@@ -25,6 +26,7 @@ All notable changes to this project will be documented in this file.
   - Updated `LedgerService` and `CryptoAdapter` to throw the new specific exceptions.
   - **RFC 7807 Problem Details**: Migrated API error responses to standard `ProblemDetail` format (replacing custom `ErrorResponse`).
   - **Validation Errors**: Unified `@Valid` validation errors to return the standard `ProblemDetail` format.
+  - **Error Codes**: Added `errorCode` field to `ProblemDetail` responses for programmatic error handling.
 - **Swagger Documentation**: Updated OpenAPI annotations in `LedgerController` to reflect correct error codes (400).
 - **Dependencies**: Added `spring-boot-starter-test`, `spring-boot-resttestclient`, and `spring-boot-restclient` to `pom.xml` to resolve missing `TestRestTemplate`.
 

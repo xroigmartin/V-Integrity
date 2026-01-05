@@ -86,6 +86,7 @@ The backend MUST follow strict separation with this specific package structure:
 ### Error Handling & Exceptions
 - **Global Handling**: All application errors MUST be handled by `GlobalExceptionHandler`.
 - **Standard Error Format**: All API error responses MUST follow the **RFC 7807 Problem Details** standard.
+- **Internal Error Codes**: API error responses MUST include a specific `errorCode` field (e.g., `ERR_VALIDATION`, `ERR_BLOCK_INVALID`) defined in `AppErrorCodes` to allow programmatic client reaction.
 - **Custom Exceptions**: Use specific custom exceptions (e.g., `DomainException`, `ApplicationException`) for business logic failures.
 - **HTTP Status Codes**:
     - **4xx**: For client errors, validation failures, and domain rule violations.

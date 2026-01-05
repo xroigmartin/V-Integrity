@@ -5,6 +5,6 @@ package xavierroigmartin.v_integrity.application.exception;
  */
 public class MempoolEmptyException extends ApplicationException {
   public MempoolEmptyException(String message) {
-    super(message);
+    super(message, AppErrorCodes.ERR_MEMPOOL_EMPTY);
   }
 }

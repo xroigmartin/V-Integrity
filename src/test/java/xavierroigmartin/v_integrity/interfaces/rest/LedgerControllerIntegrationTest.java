@@ -153,6 +153,10 @@ class LedgerControllerIntegrationTest {
     assertThat(response.getBody()).containsKey("title");
     assertThat(response.getBody()).containsKey("status");
     
+    // Expecting custom error code
+    assertThat(response.getBody()).containsKey("errorCode");
+    assertThat(response.getBody().get("errorCode")).isEqualTo("ERR_VALIDATION");
+    
     String detail = (String) response.getBody().get("detail");
     assertThat(detail).contains("Validation failed");
     assertThat(detail).contains("hashAlgorithm");
@@ -184,6 +188,10 @@ class LedgerControllerIntegrationTest {
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     // Expecting RFC 7807 Problem Details structure
     assertThat(response.getBody()).containsKey("detail");
+    
+    // Expecting custom error code (generic for now, or specific if we map it)
+    // MempoolEmptyException -> ERR_APPLICATION (default) or specific
+    assertThat(response.getBody()).containsKey("errorCode");
   }
 
   @Test

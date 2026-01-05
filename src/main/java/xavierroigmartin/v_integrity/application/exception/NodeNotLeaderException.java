@@ -5,6 +5,6 @@ package xavierroigmartin.v_integrity.application.exception;
  */
 public class NodeNotLeaderException extends ApplicationException {
   public NodeNotLeaderException(String message) {
-    super(message);
+    super(message, AppErrorCodes.ERR_NOT_LEADER);
   }
 }
