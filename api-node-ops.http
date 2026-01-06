@@ -1,0 +1,45 @@
+### Environment Configuration
+@host = http://localhost:8081
+@contentType = application/json
+
+### 1. ℹ️ TEST: Get Mempool
+GET {{host}}/api/mempool
+Content-Type: {{contentType}}
+
+> {%
+    client.test("Status is 200", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+    client.test("Has Size", function() {
+        client.assert(response.body.size >= 0, "Size should be present");
+    });
+%}
+
+### 2. ❌ TEST: Business Error (Mempool Empty)
+# Attempts to commit a block without evidences (assuming mempool is empty).
+# If evidences exist, it returns 201, which is also technically valid, but we look for the error.
+POST {{host}}/api/blocks/commit
+Content-Type: {{contentType}}
+
+> {%
+    if (response.status === 400) {
+        client.test("Error Code is ERR_MEMPOOL_EMPTY", function() {
+            client.assert(response.body.errorCode === "ERR_MEMPOOL_EMPTY", "Expected ERR_MEMPOOL_EMPTY");
+        });
+    }
+%}
+
+### 3. ℹ️ TEST: Trigger Manual Sync
+# Note: May fail if no peers are configured or running.
+POST {{host}}/api/sync
+Content-Type: {{contentType}}
+
+{
+  "sourcePeerUrl": "http://localhost:8082"
+}
+
+> {%
+    client.test("Status is 200", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}

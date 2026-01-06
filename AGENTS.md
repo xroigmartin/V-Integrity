@@ -83,6 +83,16 @@ The backend MUST follow strict separation with this specific package structure:
 - **Injection Prevention**: Although no DB is currently used, any future persistence must use parameterized queries.
 - **Dependencies**: Keep dependencies updated to avoid known vulnerabilities (CVEs).
 
+### Error Handling & Exceptions
+- **Global Handling**: All application errors MUST be handled by `GlobalExceptionHandler`.
+- **Standard Error Format**: All API error responses MUST follow the **RFC 7807 Problem Details** standard.
+- **Internal Error Codes**: API error responses MUST include a specific `errorCode` field (e.g., `ERR_VALIDATION`, `ERR_BLOCK_INVALID`) defined in `AppErrorCodes` to allow programmatic client reaction.
+- **Custom Exceptions**: Use specific custom exceptions (e.g., `DomainException`, `ApplicationException`) for business logic failures.
+- **HTTP Status Codes**:
+    - **4xx**: For client errors, validation failures, and domain rule violations.
+    - **5xx**: STRICTLY reserved for unexpected server failures or infrastructure crashes.
+- **Avoid Generic 500**: The agent MUST ensure that predictable errors (e.g., "Item not found", "Invalid state") never result in a generic 500 Internal Server Error.
+
 ### Blockchain Security
 - **Cryptographic Integrity**:
     - Signing: **Ed25519** (Standard).
@@ -98,9 +108,9 @@ The backend MUST follow strict separation with this specific package structure:
 
 ### TDD (Test-Driven Development)
 
-For changes that affect behavior (new features, bug fixes), the agent SHOULD default to TDD:
+For changes that affect behavior (new features, bug fixes), the agent **MUST strictly follow the TDD cycle (Red-Green-Refactor)**:
 
-1. **Red**: Write a failing test that captures the expected behavior.
+1. **Red**: Write a failing test that captures the expected behavior. **The agent MUST NOT write implementation code before confirming that a test exists and fails.**
 2. **Green**: Implement the minimal code to make the test pass.
 3. **Refactor**: Improve structure without changing behavior.
 
@@ -108,6 +118,18 @@ Rules:
 - **Unit Tests**: JUnit 5 + Mockito.
 - **Scope**: Domain logic, Application Services, and Adapters.
 - **Isolation**: Unit tests for Application Services should Mock the Ports.
+
+### Integration Tests (Mandatory)
+
+For any new feature involving REST endpoints or external communication (peers, DB):
+
+- **Tooling**: `@SpringBootTest(webEnvironment = RANDOM_PORT)` + `TestRestTemplate` or `WebTestClient`.
+- **External Dependencies**: MUST use **WireMock** to simulate peer nodes or external APIs. Do not rely on real network calls.
+- **Scope**: Verify the full flow from Controller -> Service -> Adapter.
+
+### HTTP Client Tests (Mandatory)
+
+For any new REST endpoint or API change, the agent **MUST** create or update an IntelliJ HTTP Client file (e.g., `api-tests.http`) to facilitate manual verification.
 
 ---
 
@@ -136,7 +158,35 @@ The agent MUST ensure that any generated code complies with these rules to avoid
     - Mandatory for **all Interfaces (Ports)**.
     - Mandatory for **Public Methods** in Services and Adapters.
     - Must explain the "What" and "Why", not just the "How".
+- **OpenAPI (Swagger)**:
+    - Mandatory for **all REST Controllers**.
+    - Every endpoint must be annotated with `@Operation` and `@ApiResponse`.
+    - DTOs must use `@Schema` where necessary to clarify fields.
 - **README**: Must be kept up-to-date with new endpoints, configuration steps, or key generation guides.
+
+---
+
+## Continuous Documentation & Versioning (Mandatory)
+
+The agent MUST automatically maintain the project documentation and versioning state during every interaction that involves code changes. **The agent MUST perform these updates proactively as part of the task completion, without waiting for explicit user instruction.**
+
+**Context Efficiency Exception**: To avoid polluting the LLM context, the agent SHOULD skip documentation updates for trivial changes (e.g., typos, style fixes, internal test adjustments) that do not affect the public API, behavior, or features. For functional changes, immediate update is mandatory.
+
+### 1. Changelog Management
+- **File**: `CHANGELOG.md`
+- **Rule**: When adding features or fixing bugs, the agent MUST append a bullet point to the `[Unreleased]` section.
+- **Format**: `- **Feature Name**: Brief description of the change.`
+
+### 2. README Updates
+- **File**: `README.md`
+- **Rule**: If the agent adds new endpoints, environment variables, or architectural components, it MUST update the corresponding section in `README.md`.
+- **Consistency**: Ensure the "Features" list and "API Endpoints" section reflect the current code state.
+
+### 3. Versioning (SemVer)
+- **File**: `pom.xml`
+- **Rule**: The project uses Semantic Versioning (`MAJOR.MINOR.PATCH-SNAPSHOT`).
+- **Snapshot**: During development, the version MUST end in `-SNAPSHOT` (e.g., `0.2.0-SNAPSHOT`).
+- **Release**: Removing `-SNAPSHOT` is a formal release step and should only be done when explicitly requested.
 
 ---
 

@@ -1,6 +1,6 @@
 # V-Integrity
 
-![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)
+![Version](https://img.shields.io/badge/version-0.3.0--SNAPSHOT-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
 [See Changelog](CHANGELOG.md) | [Contributing Guide](CONTRIBUTING.md)
@@ -214,13 +214,42 @@ Checks the cryptographic integrity of the local chain (hashes and links).
 *   **URL**: `GET /api/validate`
 *   **Response**: `{"valid": true}`
 
+## ⚠️ Error Handling
+
+The API follows the **RFC 7807 Problem Details** standard for error responses.
+
+**Example Error Response (400 Bad Request):**
+```json
+{
+  "type": "about:blank",
+  "title": "Validation Failed",
+  "status": 400,
+  "detail": "Validation failed for fields: hashAlgorithm",
+  "instance": "/api/evidences",
+  "errorCode": "ERR_VALIDATION",
+  "timestamp": "2023-10-27T10:00:00"
+}
+```
+
 ## 🧪 Testing
 
-Run unit tests with Maven:
+### Automated Tests
+Run the full test suite (Unit + Integration) with Maven:
 
 ```bash
-./mvnw test
+./mvnw clean verify
 ```
+
+- **Unit Tests**: `./mvnw test`
+- **Integration Tests**: `./mvnw failsafe:integration-test`
+
+### Manual API Verification
+The project includes **IntelliJ HTTP Client** files for manual testing:
+- `api-evidences.http`: Evidence submission and verification.
+- `api-blocks.http`: Block management and chain queries.
+- `api-node-ops.http`: Node operations (sync, mempool).
+
+You can run these directly from the IDE.
 
 ## 📜 License
 

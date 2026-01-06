@@ -1,0 +1,76 @@
+### Environment Configuration
+@host = http://localhost:8081
+@contentType = application/json
+
+### 1. ❌ TEST: Validation Error (Null Fields)
+# Expects: 400 Bad Request, errorCode: ERR_VALIDATION
+POST {{host}}/api/evidences
+Content-Type: {{contentType}}
+
+{
+  "homologationId": "",
+  "testRunId": "TR-TEST-001",
+  "artifactName": "test.log",
+  "artifactType": "LOG",
+  "hashAlgorithm": null,
+  "hash": "invalid-hash",
+  "createdBy": "tester"
+}
+
+> {%
+    client.test("Status is 400", function() {
+        client.assert(response.status === 400, "Response status is not 400");
+    });
+    client.test("Error Code is ERR_VALIDATION", function() {
+        client.assert(response.body.errorCode === "ERR_VALIDATION", "Expected ERR_VALIDATION");
+    });
+%}
+
+### 2. ✅ TEST: Submit Valid Evidence
+POST {{host}}/api/evidences
+Content-Type: {{contentType}}
+
+{
+  "homologationId": "HOM-2024-001",
+  "testRunId": "RUN-999",
+  "artifactName": "final_report.pdf",
+  "artifactType": "PDF",
+  "hashAlgorithm": "SHA-256",
+  "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "sizeBytes": 1024,
+  "createdBy": "qa-system",
+  "storageUri": "s3://bucket/reports/final.pdf",
+  "standards": ["ISO-27001"]
+}
+
+> {%
+    client.test("Status is 201", function() {
+        client.assert(response.status === 201, "Response status is not 201");
+    });
+%}
+
+### 3. ℹ️ TEST: Get Evidence by Hash (Before Mining)
+# Should return found: false if not mined yet (depends on implementation, usually searches chain only).
+GET {{host}}/api/evidences/hash/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+Content-Type: {{contentType}}
+
+> {%
+    client.test("Status is 200", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+    // Might be false if not committed
+%}
+
+### 4. ✅ TEST: Verify Evidence (Verification Endpoint)
+POST {{host}}/api/verify
+Content-Type: {{contentType}}
+
+{
+  "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}
+
+> {%
+    client.test("Status is 200", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}

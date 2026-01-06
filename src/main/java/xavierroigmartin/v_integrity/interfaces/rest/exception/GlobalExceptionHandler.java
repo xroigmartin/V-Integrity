@@ -1,19 +1,31 @@
 package xavierroigmartin.v_integrity.interfaces.rest.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.net.URI;
 import java.time.LocalDateTime;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import xavierroigmartin.v_integrity.application.exception.AppErrorCodes;
+import xavierroigmartin.v_integrity.application.exception.ApplicationException;
+import xavierroigmartin.v_integrity.domain.exception.DomainException;
+import xavierroigmartin.v_integrity.infrastructure.exception.InfrastructureException;
 
 /**
  * Global exception handler for the REST API.
  * <p>
- * Captures exceptions thrown by controllers and transforms them into a standard {@link ErrorResponse}.
+ * Captures exceptions thrown by controllers and transforms them into standard RFC 7807 Problem Details.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
@@ -21,27 +33,92 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
   /**
+   * Handles validation errors (@Valid).
+   * Returns a ProblemDetail with validation messages.
+   */
+  @Override
+  protected ResponseEntity<Object> handleMethodArgumentNotValid(
+      MethodArgumentNotValidException ex,
+      HttpHeaders headers,
+      HttpStatusCode status,
+      WebRequest request) {
+
+    String errors = ex.getBindingResult().getFieldErrors().stream()
+        .map(FieldError::getField)
+        .collect(Collectors.joining(", "));
+
+    String message = "Validation failed for fields: " + errors;
+    logger.warn("Validation Error: {}", message);
+
+    ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, message);
+    problem.setTitle("Validation Failed");
+    problem.setProperty("timestamp", LocalDateTime.now());
+    problem.setProperty("errorCode", AppErrorCodes.ERR_VALIDATION);
+
+    return createResponseEntity(problem, headers, status, request);
+  }
+
+  /**
+   * Handles Domain Exceptions (Business Rules).
+   * Mapped to 400 Bad Request.
+   */
+  @ExceptionHandler(DomainException.class)
+  public ProblemDetail handleDomainException(DomainException ex) {
+    logger.warn("Domain Error: {}", ex.getMessage());
+    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), ex.getErrorCode());
+  }
+
+  /**
+   * Handles Application Exceptions (Flow/State).
+   * Mapped to 400 Bad Request.
+   */
+  @ExceptionHandler(ApplicationException.class)
+  public ProblemDetail handleApplicationException(ApplicationException ex) {
+    logger.warn("Application Error: {}", ex.getMessage());
+    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), ex.getErrorCode());
+  }
+
+  /**
+   * Handles Infrastructure Exceptions (Technical Failures).
+   * Mapped to 500 Internal Server Error.
+   */
+  @ExceptionHandler(InfrastructureException.class)
+  public ProblemDetail handleInfrastructureException(InfrastructureException ex) {
+    logger.error("Infrastructure Error: {}", ex.getMessage(), ex);
+    return buildProblemDetail(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), AppErrorCodes.ERR_INFRASTRUCTURE);
+  }
+
+  /**
+   * Handles IllegalArgumentException (Legacy/Standard validations).
+   */
+  @ExceptionHandler(IllegalArgumentException.class)
+  public ProblemDetail handleIllegalArgumentException(IllegalArgumentException ex) {
+    logger.warn("Bad Request: {}", ex.getMessage());
+    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), AppErrorCodes.ERR_VALIDATION);
+  }
+
+  /**
+   * Handles IllegalStateException (Legacy/Standard state checks).
+   */
+  @ExceptionHandler(IllegalStateException.class)
+  public ProblemDetail handleIllegalStateException(IllegalStateException ex) {
+    logger.warn("Invalid State: {}", ex.getMessage());
+    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), AppErrorCodes.ERR_APPLICATION_STATE);
+  }
+
+  /**
    * Handles all uncaught exceptions (fallback).
-   *
-   * @param ex      The exception thrown.
-   * @param request The HTTP request that triggered the exception.
-   * @return A ResponseEntity containing the ErrorResponse and HTTP 500 status.
    */
   @ExceptionHandler(Exception.class)
-  public ResponseEntity<ErrorResponse> handleAllUncaughtException(
-      Exception ex,
-      HttpServletRequest request) {
-
+  public ProblemDetail handleAllUncaughtException(Exception ex, HttpServletRequest request) {
     logger.error("Uncaught exception processing request: {}", request.getRequestURI(), ex);
+    return buildProblemDetail(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), AppErrorCodes.ERR_UNEXPECTED);
+  }
 
-    ErrorResponse errorResponse = new ErrorResponse(
-        LocalDateTime.now(),
-        HttpStatus.INTERNAL_SERVER_ERROR.value(),
-        HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
-        ex.getMessage(),
-        request.getRequestURI()
-    );
-
-    return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+  private ProblemDetail buildProblemDetail(HttpStatus status, String detail, String errorCode) {
+    ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
+    problem.setProperty("timestamp", LocalDateTime.now());
+    problem.setProperty("errorCode", errorCode);
+    return problem;
   }
 }

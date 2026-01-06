@@ -2,7 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.2.0] - 2025-05-21
+## [Unreleased]
+
+## [0.3.0] - 2026-01-06
+
+### Added
+- **Continuous Documentation Rules**: Updated `AGENTS.md` to mandate automatic updates of `CHANGELOG.md`, `README.md`, and `PR.md`.
+- **Mandatory Integration Tests**: Defined rules for using `@SpringBootTest` and `WireMock` for external communication tests.
+- **OpenAPI Enforcement**: Mandatory Swagger annotations for all REST endpoints.
+- **Workflow**: 
+  - Added `.github/PULL_REQUEST_TEMPLATE.md` and configured `.gitignore` for local `PR.md` drafts.
+  - Optimized GitHub Actions workflow to separate unit and integration tests, and run full verification only on Pull Requests.
+  - Added support for prefixed release branches (e.g., `chore/prepare-v*`) in CI triggers.
+- **Integration Tests**: 
+  - Added `LedgerControllerIntegrationTest` covering all public endpoints and error scenarios.
+  - Configured secure test execution using environment variables for cryptographic keys.
+- **Test Infrastructure**: Separated Unit and Integration tests execution via Maven plugins (`surefire` vs `failsafe`).
+- **Agent Rules**: Updated `AGENTS.md` with stricter TDD enforcement, explicit error handling standards (RFC 7807), context-efficient documentation rules, and mandatory HTTP file tests.
+- **Error Codes**: Introduced standard application error codes (e.g., `ERR_VALIDATION`, `ERR_BLOCK_INVALID`) in API responses.
+- **HTTP Tests**: Added domain-specific HTTP test files (`api-evidences.http`, `api-blocks.http`, `api-node-ops.http`) covering all endpoints.
+
+### Fixed
+- **API Error Handling**: 
+  - Refactored error handling to use specific Domain and Application exceptions (`InvalidBlockException`, `NodeNotLeaderException`, etc.).
+  - Updated `GlobalExceptionHandler` to map these exceptions to HTTP 400 (Bad Request) instead of 500.
+  - Updated `LedgerService` and `CryptoAdapter` to throw the new specific exceptions.
+  - **RFC 7807 Problem Details**: Migrated API error responses to standard `ProblemDetail` format (replacing custom `ErrorResponse`).
+  - **Validation Errors**: Unified `@Valid` validation errors to return the standard `ProblemDetail` format.
+  - **Error Codes**: Added `errorCode` field to `ProblemDetail` responses for programmatic error handling.
+- **Swagger Documentation**: Updated OpenAPI annotations in `LedgerController` to reflect correct error codes (400).
+- **Dependencies**: Added `spring-boot-starter-test`, `spring-boot-resttestclient`, and `spring-boot-restclient` to `pom.xml` to resolve missing `TestRestTemplate`.
+
+## [0.2.0] - 2025-12-28
 
 ### Added
 - **Block Synchronization (Catch-up)**: Implemented a pull-based mechanism (`SyncService`) to allow follower nodes to recover missing blocks after downtime.
@@ -19,7 +50,7 @@ All notable changes to this project will be documented in this file.
 - **Peer Configuration**: Correctly configured peer URLs in `application-node2.yml` and `application-node3.yml`.
 - **Startup Optimization**: Leader node now skips initial sync to avoid connection errors with followers.
 
-## [0.1.1] - 2025-05-21
+## [0.1.1] - 2025-12-24
 
 ### Added
 - **API Documentation**: Integrated Swagger/OpenAPI (SpringDoc) with detailed endpoint descriptions.
@@ -27,7 +58,7 @@ All notable changes to this project will be documented in this file.
 - **CI/CD**: Added GitHub Actions workflow for automated testing and building.
 - **Maven Wrapper**: Included Maven Wrapper for reproducible builds.
 
-## [0.1.0] - 2025-05-21
+## [0.1.0] - 2025-12-23
 
 ### Added
 - **Core Blockchain Logic**: Implemented `LedgerService` for managing blocks, evidences, and mempool.
