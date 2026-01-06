@@ -182,12 +182,7 @@ The agent MUST automatically maintain the project documentation and versioning s
 - **Rule**: If the agent adds new endpoints, environment variables, or architectural components, it MUST update the corresponding section in `README.md`.
 - **Consistency**: Ensure the "Features" list and "API Endpoints" section reflect the current code state.
 
-### 3. Pull Request Draft
-- **File**: `PR.md` (Root directory, ignored by git)
-- **Rule**: The agent MUST maintain a live draft of the Pull Request description in `PR.md`.
-- **Content**: Update the "Summary", "Changes", and "Checklist" sections to reflect the work done in the current session.
-
-### 4. Versioning (SemVer)
+### 3. Versioning (SemVer)
 - **File**: `pom.xml`
 - **Rule**: The project uses Semantic Versioning (`MAJOR.MINOR.PATCH-SNAPSHOT`).
 - **Snapshot**: During development, the version MUST end in `-SNAPSHOT` (e.g., `0.2.0-SNAPSHOT`).
