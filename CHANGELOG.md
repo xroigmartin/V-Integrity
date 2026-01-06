@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-01-06
+
 ### Added
 - **Continuous Documentation Rules**: Updated `AGENTS.md` to mandate automatic updates of `CHANGELOG.md`, `README.md`, and `PR.md`.
 - **Mandatory Integration Tests**: Defined rules for using `@SpringBootTest` and `WireMock` for external communication tests.
