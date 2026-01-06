@@ -3,9 +3,9 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/ledger
-    username: ledger
-    password: ledger
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${POSTGRES_USER:ledger}
+    password: ${POSTGRES_PASSWORD:ledger}
 
 ledger:
   node:
