@@ -1,4 +1,24 @@
 services:
+  postgres:
+    image: postgres:17
+    container_name: v-integrity-postgres
+    environment:
+      - POSTGRES_DB=ledger
+      - POSTGRES_USER=ledger
+      - POSTGRES_PASSWORD=ledger
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - blockchain-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ledger -d ledger"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
   node-1:
     build: .
     container_name: v-integrity-node-1
@@ -12,8 +32,16 @@ services:
       # Secrets loaded from local .env file
       - LEDGER_PRIVATE_KEY_BASE64=${LEDGER_PRIVATE_KEY_BASE64}
       - LEDGER_NODE1_PUBLIC_KEY_BASE64=${LEDGER_NODE1_PUBLIC_KEY_BASE64}
+      # Database Configuration
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/ledger
+      - SPRING_DATASOURCE_USERNAME=ledger
+      - SPRING_DATASOURCE_PASSWORD=ledger
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=validate
     networks:
       - blockchain-net
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8081/actuator/health"]
       interval: 5s
@@ -33,10 +61,17 @@ services:
       - LEDGER_NODE_PEERS=http://node-1:8081
       # Node 2 needs public key to verify blocks
       - LEDGER_NODE1_PUBLIC_KEY_BASE64=${LEDGER_NODE1_PUBLIC_KEY_BASE64}
+      # Database Configuration
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/ledger
+      - SPRING_DATASOURCE_USERNAME=ledger
+      - SPRING_DATASOURCE_PASSWORD=ledger
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=validate
     networks:
       - blockchain-net
     depends_on:
       node-1:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
 
   node-3:
@@ -51,12 +86,22 @@ services:
       - LEDGER_NODE_PEERS=http://node-1:8081
       # Node 3 needs public key to verify blocks
       - LEDGER_NODE1_PUBLIC_KEY_BASE64=${LEDGER_NODE1_PUBLIC_KEY_BASE64}
+      # Database Configuration
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/ledger
+      - SPRING_DATASOURCE_USERNAME=ledger
+      - SPRING_DATASOURCE_PASSWORD=ledger
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=validate
     networks:
       - blockchain-net
     depends_on:
       node-1:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
 
 networks:
   blockchain-net:
     driver: bridge
+
+volumes:
+  postgres-data:

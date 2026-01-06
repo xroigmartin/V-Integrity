@@ -3,6 +3,9 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- **Persistence Infrastructure**: Added PostgreSQL 17 to `docker-compose.yml` and configured Spring Boot Data JPA with Flyway support.
+- **Database Configuration**: Updated `application.yaml` and node-specific profiles to connect to the local PostgreSQL instance.
+- **Dependencies**: Added `spring-boot-starter-data-jpa`, `postgresql`, and `flyway-core` to `pom.xml`.
 
 ## [0.3.0] - 2026-01-06
 
@@ -71,7 +74,7 @@ All notable changes to this project will be documented in this file.
   - `POST /api/blocks/commit`: Trigger block creation (Leader only).
   - `GET /api/chain`: Retrieve the blockchain.
   - `POST /api/verify`: Verify evidence integrity and inclusion in the chain.
-- **Security**: Externalized private/public keys using environment variables (`.env` support).
+  - `Security`: Externalized private/public keys using environment variables (`.env` support).
 - **Testing**: Added unit tests for core services and adapters.
 - **Documentation**: Comprehensive JavaDoc for all classes and ports.
 

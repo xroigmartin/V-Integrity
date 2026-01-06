@@ -1,6 +1,12 @@
 server:
   port: 8083
 
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ledger
+    username: ledger
+    password: ledger
+
 ledger:
   node:
     nodeId: "node-3"

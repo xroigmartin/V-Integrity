@@ -9,9 +9,15 @@ spring:
       enabled: true
   jackson:
     time-zone: UTC
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ledger
+    username: ledger
+    password: ledger
   jpa:
+    open-in-view: false
     properties:
       hibernate:
+        ddl-auto: validate
         jdbc:
           time_zone: UTC
 

@@ -17,6 +17,9 @@
     - **Push**: Real-time block propagation to peers.
     - **Pull (Catch-up)**: Synchronization mechanism for nodes recovering from downtime.
     - **Auto-Sync**: Nodes automatically sync with peers on startup.
+- **Persistence**:
+    - **PostgreSQL**: Stores blocks and evidences in a relational database.
+    - **Append-Only**: Ensures data immutability at the database level.
 - **Docker Ready**: Includes Dockerfile and Compose for instant deployment.
 - **OpenAPI Docs**: Interactive API documentation via Swagger UI.
 
@@ -27,6 +30,7 @@
 - **Architecture**: Hexagonal (Ports & Adapters) + DDD
 - **Build Tool**: Maven
 - **Containerization**: Docker & Docker Compose
+- **Database**: PostgreSQL 17
 
 ## 🏗️ Architecture
 
@@ -34,7 +38,7 @@ The project follows a strict Hexagonal Architecture:
 
 - **Domain**: Core business logic and models (`Block`, `EvidenceRecord`). Framework-agnostic.
 - **Application**: Use cases and Ports (`LedgerService`, `SyncService`, `CryptoPort`).
-- **Infrastructure**: Adapters for external concerns (`CryptoAdapter`, `ReplicationAdapter`, `SyncAdapter`, `AutoSyncAdapter`).
+- **Infrastructure**: Adapters for external concerns (`CryptoAdapter`, `ReplicationAdapter`, `SyncAdapter`, `AutoSyncAdapter`, `PersistenceAdapter`).
 - **Interfaces**: Entry points to the application (`LedgerController`).
 
 ## 🐳 Running with Docker (Recommended)
