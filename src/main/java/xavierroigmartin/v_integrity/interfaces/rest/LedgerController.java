@@ -101,6 +101,10 @@ public class LedgerController {
    * @return List of blocks.
    */
   @Operation(summary = "Get Blocks Range", description = "Returns a list of blocks starting from a specific height.")
+  @ApiResponses(value = {
+      @ApiResponse(responseCode = "200", description = "Blocks retrieved successfully"),
+      @ApiResponse(responseCode = "400", description = "Invalid parameters (e.g., negative fromHeight)")
+  })
   @GetMapping("/blocks")
   public List<Block> getBlocks(
       @RequestParam(defaultValue = "0") long fromHeight,
@@ -175,7 +179,7 @@ public class LedgerController {
   @Operation(summary = "Commit Block (Leader Only)", description = "Triggers the creation of a new block containing all pending evidences.")
   @ApiResponses(value = {
       @ApiResponse(responseCode = "201", description = "Block mined and committed successfully"),
-      @ApiResponse(responseCode = "500", description = "Node is not a leader or mempool is empty")
+      @ApiResponse(responseCode = "400", description = "Node is not a leader or mempool is empty")
   })
   @PostMapping("/blocks/commit")
   @ResponseStatus(HttpStatus.CREATED)

@@ -130,7 +130,68 @@ class LedgerControllerIntegrationTest {
         Map.class
     );
 
-    assertThat(response.getStatusCode()).isIn(HttpStatus.BAD_REQUEST, HttpStatus.INTERNAL_SERVER_ERROR);
+    // Updated: Now strictly expects BAD_REQUEST (400) thanks to GlobalExceptionHandler
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+  }
+
+  @Test
+  void shouldReturnFormattedErrorForValidationFailure() {
+    // Request with missing mandatory fields (hashAlgorithm is null)
+    EvidenceRequest invalidRequest = new EvidenceRequest(
+        "H-123", "TR-456", "report.pdf", "PDF", null, "hash", 1024L, "user", "uri", List.of()
+    );
+
+    ResponseEntity<Map> response = restTemplate.postForEntity(
+        "http://localhost:" + port + "/api/evidences",
+        invalidRequest,
+        Map.class
+    );
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    // Expecting RFC 7807 Problem Details structure
+    assertThat(response.getBody()).containsKey("detail");
+    assertThat(response.getBody()).containsKey("title");
+    assertThat(response.getBody()).containsKey("status");
+    
+    // Expecting custom error code
+    assertThat(response.getBody()).containsKey("errorCode");
+    assertThat(response.getBody().get("errorCode")).isEqualTo("ERR_VALIDATION");
+    
+    String detail = (String) response.getBody().get("detail");
+    assertThat(detail).contains("Validation failed");
+    assertThat(detail).contains("hashAlgorithm");
+  }
+
+  @Test
+  void shouldReturnBadRequestWhenCommittingWithoutEvidences() {
+    // Ensure mempool is empty (might need a way to clear it or assume test order/isolation)
+    // In this simple PoC test, we just try to commit. If mempool is empty, it throws IllegalStateException.
+    // If not empty, it commits. To be safe, we can try to commit until empty or just assert 201 or 400.
+    // But specifically, we want to test the exception mapping.
+    
+    // Let's try to commit. If it succeeds (201), we do it again until it fails (400) because mempool is empty.
+    ResponseEntity<Map> response = restTemplate.postForEntity(
+        "/api/blocks/commit",
+        null,
+        Map.class
+    );
+
+    if (response.getStatusCode() == HttpStatus.CREATED) {
+       // Try again, now mempool should be empty
+       response = restTemplate.postForEntity(
+          "/api/blocks/commit",
+          null,
+          Map.class
+      );
+    }
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    // Expecting RFC 7807 Problem Details structure
+    assertThat(response.getBody()).containsKey("detail");
+    
+    // Expecting custom error code (generic for now, or specific if we map it)
+    // MempoolEmptyException -> ERR_APPLICATION (default) or specific
+    assertThat(response.getBody()).containsKey("errorCode");
   }
 
   @Test
@@ -288,7 +349,8 @@ class LedgerControllerIntegrationTest {
         Map.class
     );
 
-    assertThat(response.getStatusCode()).isIn(HttpStatus.BAD_REQUEST, HttpStatus.INTERNAL_SERVER_ERROR);
+    // Updated: Now strictly expects BAD_REQUEST (400)
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
   }
 
   @Test

@@ -1,0 +1,67 @@
+### Environment Configuration
+@host = http://localhost:8081
+@contentType = application/json
+
+### 1. ✅ TEST: Commit Block (Leader)
+# Requires pending evidences in mempool (use api-evidences.http first if empty).
+POST {{host}}/api/blocks/commit
+Content-Type: {{contentType}}
+
+> {%
+    client.test("Status is 201 or 400 (if empty)", function() {
+        // Accept 400 if mempool is empty to avoid breaking the suite if run standalone
+        client.assert(response.status === 201 || response.status === 400, "Unexpected status");
+    });
+%}
+
+### 2. ℹ️ TEST: Get Full Chain
+GET {{host}}/api/chain
+Content-Type: {{contentType}}
+
+> {%
+    client.test("Status is 200", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+    client.test("Chain is array", function() {
+        client.assert(Array.isArray(response.body.chain), "Chain should be an array");
+    });
+%}
+
+### 3. ℹ️ TEST: Get Latest Block (Header)
+GET {{host}}/api/blocks/latest
+Content-Type: {{contentType}}
+
+> {%
+    client.test("Status is 200", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+    client.test("Has Height", function() {
+        client.assert(response.body.height >= 0, "Height should be present");
+    });
+%}
+
+### 4. ℹ️ TEST: Get Blocks Range
+GET {{host}}/api/blocks?fromHeight=0&limit=5
+Content-Type: {{contentType}}
+
+> {%
+    client.test("Status is 200", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+    client.test("Is Array", function() {
+        client.assert(Array.isArray(response.body), "Body should be an array");
+    });
+%}
+
+### 5. ✅ TEST: Validate Chain Integrity
+GET {{host}}/api/validate
+Content-Type: {{contentType}}
+
+> {%
+    client.test("Status is 200", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+    client.test("Valid is true", function() {
+        client.assert(response.body.valid === true, "Chain should be valid");
+    });
+%}
