@@ -1,6 +1,13 @@
 -- V1__init_ledger.sql
 -- Initial schema for V-Integrity Ledger (PostgreSQL)
 
+-- 0. SCHEMA SETUP
+-- Create a dedicated schema for isolation and security.
+CREATE SCHEMA IF NOT EXISTS ledger;
+
+-- Set the search path so subsequent commands apply to this schema.
+SET search_path TO ledger;
+
 -- 1. BLOCKS TABLE
 -- Stores the immutable chain of blocks.
 CREATE TABLE blocks (

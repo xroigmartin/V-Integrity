@@ -23,7 +23,8 @@ services:
   flyway-migrator:
     image: flyway/flyway:10
     container_name: v-integrity-migrator
-    command: -url=jdbc:postgresql://postgres:5432/${POSTGRES_DB} -user=${POSTGRES_USER} -password=${POSTGRES_PASSWORD} -connectRetries=60 migrate
+    # Added -schemas=ledger to manage the dedicated schema
+    command: -url=jdbc:postgresql://postgres:5432/${POSTGRES_DB} -user=${POSTGRES_USER} -password=${POSTGRES_PASSWORD} -connectRetries=60 -schemas=ledger migrate
     volumes:
       - ./src/main/resources/db/migration:/flyway/sql
     networks:
