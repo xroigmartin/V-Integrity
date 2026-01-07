@@ -3,8 +3,9 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- **Security**: Implemented Role-Based Access Control (RBAC) in PostgreSQL with `ledger_owner` (DDL) and `ledger_app` (DML) roles.
 - **Database Migration**: Decoupled Flyway migration from application startup. Added a dedicated `flyway-migrator` service in Docker Compose.
-- **Database Schema**: Created initial Flyway migration `V1__init_ledger.sql` defining `blocks`, `evidences`, and `block_evidences` tables.
+- **Database Schema**: Created initial Flyway migration `V1__init_ledger.sql` defining `blocks`, `evidences`, and `block_evidences` tables in a dedicated `ledger` schema.
 - **Immutability**: Implemented PostgreSQL triggers to enforce append-only behavior (blocking UPDATE/DELETE) on ledger tables.
 - **Persistence Infrastructure**: Added PostgreSQL 17 to `docker-compose.yml` and configured Spring Boot Data JPA with Flyway support.
 - **Database Configuration**: Updated `application.yaml` and node-specific profiles to connect to the local PostgreSQL instance.

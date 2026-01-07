@@ -4,12 +4,18 @@ services:
     container_name: v-integrity-postgres
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_USER=${POSTGRES_USER} # Superuser
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      # Custom env vars for init script
+      - POSTGRES_OWNER_USER=${POSTGRES_OWNER_USER}
+      - POSTGRES_OWNER_PASSWORD=${POSTGRES_OWNER_PASSWORD}
+      - POSTGRES_APP_USER=${POSTGRES_APP_USER}
+      - POSTGRES_APP_PASSWORD=${POSTGRES_APP_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      # - postgres-data:/var/lib/postgresql/data # Disabled for dev iteration
+      - ./docker/postgres/init-user-db.sh:/docker-entrypoint-initdb.d/init-user-db.sh
     networks:
       - blockchain-net
     healthcheck:
@@ -20,11 +26,11 @@ services:
       start_period: 10s
 
   # Ephemeral container to run database migrations
+  # Uses OWNER credentials (DDL permissions)
   flyway-migrator:
     image: flyway/flyway:10
     container_name: v-integrity-migrator
-    # Added -schemas=ledger to manage the dedicated schema
-    command: -url=jdbc:postgresql://postgres:5432/${POSTGRES_DB} -user=${POSTGRES_USER} -password=${POSTGRES_PASSWORD} -connectRetries=60 -schemas=ledger migrate
+    command: -url=jdbc:postgresql://postgres:5432/${POSTGRES_DB} -user=${POSTGRES_OWNER_USER} -password=${POSTGRES_OWNER_PASSWORD} -connectRetries=60 -schemas=ledger migrate
     volumes:
       - ./src/main/resources/db/migration:/flyway/sql
     networks:
@@ -46,10 +52,10 @@ services:
       # Secrets loaded from local .env file
       - LEDGER_PRIVATE_KEY_BASE64=${LEDGER_PRIVATE_KEY_BASE64}
       - LEDGER_NODE1_PUBLIC_KEY_BASE64=${LEDGER_NODE1_PUBLIC_KEY_BASE64}
-      # Database Configuration
+      # Database Configuration (Uses APP credentials - DML only)
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_APP_USER=${POSTGRES_APP_USER}
+      - POSTGRES_APP_PASSWORD=${POSTGRES_APP_PASSWORD}
       - SPRING_JPA_HIBERNATE_DDL_AUTO=validate
     networks:
       - blockchain-net
@@ -77,10 +83,10 @@ services:
       - LEDGER_NODE_PEERS=http://node-1:8081
       # Node 2 needs public key to verify blocks
       - LEDGER_NODE1_PUBLIC_KEY_BASE64=${LEDGER_NODE1_PUBLIC_KEY_BASE64}
-      # Database Configuration
+      # Database Configuration (Uses APP credentials - DML only)
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_APP_USER=${POSTGRES_APP_USER}
+      - POSTGRES_APP_PASSWORD=${POSTGRES_APP_PASSWORD}
       - SPRING_JPA_HIBERNATE_DDL_AUTO=validate
     networks:
       - blockchain-net
@@ -104,10 +110,10 @@ services:
       - LEDGER_NODE_PEERS=http://node-1:8081
       # Node 3 needs public key to verify blocks
       - LEDGER_NODE1_PUBLIC_KEY_BASE64=${LEDGER_NODE1_PUBLIC_KEY_BASE64}
-      # Database Configuration
+      # Database Configuration (Uses APP credentials - DML only)
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_APP_USER=${POSTGRES_APP_USER}
+      - POSTGRES_APP_PASSWORD=${POSTGRES_APP_PASSWORD}
       - SPRING_JPA_HIBERNATE_DDL_AUTO=validate
     networks:
       - blockchain-net

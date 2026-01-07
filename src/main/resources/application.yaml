@@ -14,8 +14,9 @@ spring:
     # Example Local: jdbc:postgresql://localhost:5432/ledger
     # Example Docker: jdbc:postgresql://postgres:5432/ledger
     url: ${SPRING_DATASOURCE_URL}
-    username: ${POSTGRES_USER:ledger}
-    password: ${POSTGRES_PASSWORD:ledger}
+    # App uses restricted credentials (DML only)
+    username: ${POSTGRES_APP_USER:ledger_app}
+    password: ${POSTGRES_APP_PASSWORD:ledger_app_password}
   jpa:
     open-in-view: false
     properties:

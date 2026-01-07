@@ -94,10 +94,18 @@ LEDGER_PRIVATE_KEY_BASE64=...
 # Public Key of the authorized node (Base64 X.509)
 LEDGER_NODE1_PUBLIC_KEY_BASE64=...
 
-# Database Configuration
+# Database Configuration (PostgreSQL)
 POSTGRES_DB=ledger
 POSTGRES_USER=ledger
 POSTGRES_PASSWORD=ledger
+
+# Database Roles (RBAC)
+POSTGRES_OWNER_USER=ledger_owner
+POSTGRES_OWNER_PASSWORD=ledger_owner_password
+POSTGRES_APP_USER=ledger_app
+POSTGRES_APP_PASSWORD=ledger_app_password
+
+# Connection URL
 SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/ledger
 ```
 
