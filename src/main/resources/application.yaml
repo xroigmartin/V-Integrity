@@ -23,6 +23,9 @@ spring:
         ddl-auto: validate
         jdbc:
           time_zone: UTC
+  flyway:
+    # Disable auto-migration on startup. Migrations are handled by an external process (Docker/CI).
+    enabled: false
 
 logging:
   level:

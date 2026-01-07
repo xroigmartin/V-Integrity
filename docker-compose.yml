@@ -19,6 +19,19 @@ services:
       retries: 5
       start_period: 10s
 
+  # Ephemeral container to run database migrations
+  flyway-migrator:
+    image: flyway/flyway:10
+    container_name: v-integrity-migrator
+    command: -url=jdbc:postgresql://postgres:5432/${POSTGRES_DB} -user=${POSTGRES_USER} -password=${POSTGRES_PASSWORD} -connectRetries=60 migrate
+    volumes:
+      - ./src/main/resources/db/migration:/flyway/sql
+    networks:
+      - blockchain-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   node-1:
     build: .
     container_name: v-integrity-node-1
@@ -42,6 +55,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      flyway-migrator:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8081/actuator/health"]
       interval: 5s
@@ -73,6 +88,8 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+      flyway-migrator:
+        condition: service_completed_successfully
 
   node-3:
     build: .
@@ -98,6 +115,8 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+      flyway-migrator:
+        condition: service_completed_successfully
 
 networks:
   blockchain-net:
