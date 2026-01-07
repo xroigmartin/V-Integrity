@@ -21,9 +21,10 @@ CREATE TABLE blocks (
 
 -- 2. EVIDENCES TABLE
 -- Stores the raw evidence data.
--- Hash is the unique identifier for content addressability.
+-- Uses Surrogate Key (BIGINT) for internal efficiency, UUID for public identity.
 CREATE TABLE evidences (
-    evidence_id UUID PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY, -- Internal Surrogate Key
+    evidence_id UUID NOT NULL UNIQUE, -- Public Business Key
     hash CHAR(64) NOT NULL UNIQUE,
     hash_algorithm VARCHAR(20) NOT NULL,
     homologation_id VARCHAR(80) NOT NULL,
@@ -39,17 +40,18 @@ CREATE TABLE evidences (
 
 -- 3. BLOCK_EVIDENCES TABLE
 -- Join table to link evidences to specific blocks.
--- Ensures many-to-many relationship (though usually 1 evidence -> 1 block in this PoC).
+-- Links to internal ID (BIGINT) of evidences for performance.
 CREATE TABLE block_evidences (
     block_height BIGINT NOT NULL,
-    evidence_id UUID NOT NULL,
-    PRIMARY KEY (block_height, evidence_id),
+    evidence_internal_id BIGINT NOT NULL,
+    PRIMARY KEY (block_height, evidence_internal_id),
     CONSTRAINT fk_block_evidences_block FOREIGN KEY (block_height) REFERENCES blocks(height),
-    CONSTRAINT fk_block_evidences_evidence FOREIGN KEY (evidence_id) REFERENCES evidences(evidence_id)
+    CONSTRAINT fk_block_evidences_evidence FOREIGN KEY (evidence_internal_id) REFERENCES evidences(id)
 );
 
 -- Indexes for faster lookups
 CREATE INDEX idx_blocks_hash ON blocks(hash);
+CREATE INDEX idx_evidences_public_id ON evidences(evidence_id); -- Fast lookup by UUID
 CREATE INDEX idx_evidences_hash ON evidences(hash);
 CREATE INDEX idx_evidences_homologation ON evidences(homologation_id);
 

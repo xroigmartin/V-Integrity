@@ -105,8 +105,11 @@ POSTGRES_OWNER_PASSWORD=ledger_owner_password
 POSTGRES_APP_USER=ledger_app
 POSTGRES_APP_PASSWORD=ledger_app_password
 
-# Connection URL
-SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/ledger
+# Connection URLs
+# For Local Development (IntelliJ)
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/ledger
+# For Docker Compose
+DOCKER_DATASOURCE_URL=jdbc:postgresql://postgres:5432/ledger
 ```
 
 ### Application Properties
