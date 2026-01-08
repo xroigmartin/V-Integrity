@@ -13,7 +13,7 @@ import xavierroigmartin.v_integrity.infrastructure.persistence.entity.BlockEntit
 import xavierroigmartin.v_integrity.infrastructure.persistence.entity.BlockEvidenceEntity;
 import xavierroigmartin.v_integrity.infrastructure.persistence.entity.EvidenceEntity;
 
-class BlockJpaRepositoryTest extends AbstractIntegrationTest {
+class BlockJpaRepositoryIntegrationTest extends AbstractIntegrationTest {
 
   @Autowired
   private BlockJpaRepository blockRepository;
