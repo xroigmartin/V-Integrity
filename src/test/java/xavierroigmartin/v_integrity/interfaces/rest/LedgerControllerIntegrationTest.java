@@ -25,6 +25,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
+import xavierroigmartin.v_integrity.AbstractIntegrationTest;
 import xavierroigmartin.v_integrity.application.LedgerService;
 import xavierroigmartin.v_integrity.application.port.out.CryptoPort;
 import xavierroigmartin.v_integrity.application.port.out.HashingPort;
@@ -37,7 +38,7 @@ import xavierroigmartin.v_integrity.interfaces.rest.dto.VerifyRequest;
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 @AutoConfigureTestRestTemplate
 @ActiveProfiles("test")
-class LedgerControllerIntegrationTest {
+class LedgerControllerIntegrationTest extends AbstractIntegrationTest {
 
   @LocalServerPort
   private int port;

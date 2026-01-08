@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import xavierroigmartin.v_integrity.infrastructure.persistence.converter.JsonStringListConverter;
 
 /**
@@ -60,6 +61,7 @@ public class EvidenceEntity {
   private String storageUri;
 
   @Column(name = "standards", columnDefinition = "jsonb")
+  @JdbcTypeCode(SqlTypes.JSON)
   @Convert(converter = JsonStringListConverter.class)
   private List<String> standards;
 
