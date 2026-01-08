@@ -6,23 +6,27 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public abstract class AbstractIntegrationTest {
 
-  // Use default 'postgres' superuser for tests to avoid permission issues during schema creation
-  @Container
+  // Remove @Container to prevent JUnit from managing lifecycle per class
+  // Use static initialization for Singleton Container pattern
   static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17")
       .withDatabaseName("ledger")
       .withUsername("postgres") 
       .withPassword("postgres");
 
+  static {
+    postgres.start();
+  }
+
   @BeforeAll
   static void runMigrations() {
       // Manually run Flyway to ensure migrations are applied
+      // This is safe to run multiple times as Flyway is idempotent
       Flyway flyway = Flyway.configure()
           .dataSource(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())
           .schemas("ledger")
