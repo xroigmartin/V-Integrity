@@ -6,6 +6,7 @@ import java.time.Duration;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeAll;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -13,6 +14,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ActiveProfiles("test") // Activate 'test' profile to load application-test.yml
 public abstract class AbstractIntegrationTest {
 
   // Use default 'postgres' superuser for tests to avoid permission issues during schema creation
@@ -36,15 +38,11 @@ public abstract class AbstractIntegrationTest {
   static void setupDatabase() {
       try {
         // 1. Clean Database (Truncate tables to ensure fresh state for each test class)
-        // This prevents "RehydrationFailedException" when ApplicationContext reloads and finds dirty data from previous tests
         try (Connection conn = postgres.createConnection(""); Statement stmt = conn.createStatement()) {
-            // We need to check if tables exist before truncating, or just ignore errors if they don't
-            // Simplest way: Try to truncate, ignore if table doesn't exist (first run)
             try {
                 stmt.execute("TRUNCATE TABLE ledger.block_evidences, ledger.evidences, ledger.blocks CASCADE");
                 System.out.println("=== DATABASE TRUNCATED SUCCESSFULLY ===");
             } catch (Exception e) {
-                // Ignore, tables might not exist yet
                 System.out.println("=== DATABASE TRUNCATE SKIPPED (Tables likely missing) ===");
             }
         }
