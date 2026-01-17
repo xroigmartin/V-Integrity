@@ -23,6 +23,7 @@ import xavierroigmartin.v_integrity.domain.Block;
 import xavierroigmartin.v_integrity.domain.EvidenceRecord;
 import xavierroigmartin.v_integrity.domain.exception.InvalidBlockException;
 import xavierroigmartin.v_integrity.domain.exception.InvalidEvidenceException;
+import xavierroigmartin.v_integrity.domain.exception.LedgerCorruptException;
 
 /**
  * Core application service that manages the blockchain ledger state.
@@ -59,6 +60,85 @@ public class LedgerService {
     this.persistence = persistence;
     this.logger = logger;
     chain.add(createGenesis());
+  }
+
+  /**
+   * Initializes the in-memory chain from a list of blocks (Rehydration).
+   * Validates the integrity of the provided chain before accepting it.
+   *
+   * @param blocks The list of blocks loaded from storage.
+   * @throws LedgerCorruptException if the chain is invalid or corrupt.
+   */
+  public synchronized void initializeChain(List<Block> blocks) {
+    if (blocks == null || blocks.isEmpty()) {
+      logger.logBusinessEvent("CHAIN_REHYDRATION_SKIPPED", Map.of("reason", "Empty source"));
+      return;
+    }
+
+    logger.logBusinessEvent("CHAIN_REHYDRATION_STARTED", Map.of("blocksCount", blocks.size()));
+
+    // Validate the incoming chain integrity
+    for (int i = 0; i < blocks.size(); i++) {
+      var current = blocks.get(i);
+      
+      // 1. Genesis Check
+      if (i == 0) {
+        if (current.height() != 0) {
+           throw new LedgerCorruptException("First block must be height 0 (Genesis). Found: " + current.height());
+        }
+      } else {
+        // 2. Link Check
+        var prev = blocks.get(i - 1);
+        if (current.height() != prev.height() + 1) {
+          throw new LedgerCorruptException("Gap in chain. Expected height " + (prev.height() + 1) + " but found " + current.height());
+        }
+        if (!current.previousHash().equals(prev.hash())) {
+          throw new LedgerCorruptException("Broken link at height " + current.height());
+        }
+        
+        // 3. Signature & Hash Check
+        validateBlockIntegrity(current);
+      }
+    }
+
+    // If all good, replace in-memory chain
+    this.chain.clear();
+    this.chain.addAll(blocks);
+    
+    logger.logBusinessEvent("CHAIN_REHYDRATED", Map.of(
+        "height", latest().height(),
+        "blocks", chain.size()
+    ));
+  }
+
+  private void validateBlockIntegrity(Block block) {
+      // Skip signature check for Genesis (it's hardcoded/unsigned in this PoC or self-signed)
+      if (block.height() == 0) return;
+
+      var pubKey = nodeConfig.getAllowedNodePublicKeys().get(block.proposerNodeId());
+      if (pubKey == null) {
+          throw new LedgerCorruptException("Unknown proposer " + block.proposerNodeId() + " at height " + block.height());
+      }
+
+      // Recompute hash
+      var canonical = canonicalBlockFields(
+          block.height(),
+          block.timestamp(),
+          block.evidences(),
+          block.previousHash(),
+          block.proposerNodeId()
+      );
+      var recomputedHash = hashing.sha256Hex(canonical);
+      
+      if (!recomputedHash.equals(block.hash())) {
+          throw new LedgerCorruptException("Invalid hash at height " + block.height());
+      }
+
+      // Verify signature
+      var hashBytes = hexToBytes(block.hash());
+      if (!crypto.verifyEd25519(hashBytes, block.signature(), pubKey)) {
+          throw new LedgerCorruptException("Invalid signature at height " + block.height());
+      }
   }
 
   /**
@@ -124,7 +204,7 @@ public class LedgerService {
    */
   public EvidenceRecord submitEvidence(EvidenceRecord evidence) {
     // Minimal PoC validations
-    String algo = normalizeAlgo(evidence.hashAlgorithm());
+    var algo = normalizeAlgo(evidence.hashAlgorithm());
     if (!"SHA-256".equals(algo)) {
       throw new InvalidEvidenceException("Supported hashAlgorithm in PoC: SHA-256");
     }
@@ -133,7 +213,7 @@ public class LedgerService {
           "Invalid hash: must be a 64-character hex string (SHA-256)");
     }
 
-    EvidenceRecord normalized = new EvidenceRecord(
+    var normalized = new EvidenceRecord(
         evidence.evidenceId(),
         evidence.homologationId(),
         evidence.testRunId(),
@@ -187,18 +267,18 @@ public class LedgerService {
         throw new MempoolEmptyException("No pending evidences in mempool.");
       }
 
-      Block prev = latest();
+      var prev = latest();
       long height = prev.height() + 1;
-      Instant ts = Instant.now();
-      List<EvidenceRecord> evidences = List.copyOf(mempool);
-      String previousHash = prev.hash();
-      String proposer = nodeConfig.getNodeId();
+      var ts = Instant.now();
+      var evidences = List.copyOf(mempool);
+      var previousHash = prev.hash();
+      var proposer = nodeConfig.getNodeId();
 
-      String canonical = canonicalBlockFields(height, ts, evidences, previousHash, proposer);
-      String hashHex = hashing.sha256Hex(canonical);
-      byte[] hashBytes = hexToBytes(hashHex);
+      var canonical = canonicalBlockFields(height, ts, evidences, previousHash, proposer);
+      var hashHex = hashing.sha256Hex(canonical);
+      var hashBytes = hexToBytes(hashHex);
 
-      String signature = crypto.signEd25519(hashBytes, nodeConfig.getPrivateKeyBase64());
+      var signature = crypto.signEd25519(hashBytes, nodeConfig.getPrivateKeyBase64());
 
       newBlock = new Block(height, ts, evidences, previousHash, proposer, hashHex, signature);
 
@@ -228,7 +308,7 @@ public class LedgerService {
    * @throws InvalidBlockException if the block is invalid (height, hash, signature, etc.).
    */
   public synchronized void acceptReplicatedBlock(Block incoming) {
-    Block prev = latest();
+    var prev = latest();
 
     // Idempotency check: if we already have this block (same height, same hash), ignore it.
     if (incoming.height() <= prev.height()) {
@@ -245,7 +325,7 @@ public class LedgerService {
       // For PoC we just reject if it doesn't match next height.
       // But the user asked for idempotency.
       // If incoming.height <= prev.height(), we can check if chain.get(incoming.height) matches.
-      Block existing = chain.get((int) incoming.height());
+      var existing = chain.get((int) incoming.height());
       if (existing.hash().equals(incoming.hash())) {
          // Already have it
          persistence.persistBlock(incoming);
@@ -257,7 +337,7 @@ public class LedgerService {
     }
 
     if (incoming.height() != prev.height() + 1) {
-      String msg =
+      var msg =
           "Invalid Height. Expected " + (prev.height() + 1) + " but received " + incoming.height();
       logger.logBusinessError("INVALID_BLOCK_HEIGHT", msg,
           Map.of("proposer", incoming.proposerNodeId()));
@@ -267,20 +347,20 @@ public class LedgerService {
       throw new InvalidBlockException("Invalid previousHash.");
     }
 
-    String pubKey = nodeConfig.getAllowedNodePublicKeys().get(incoming.proposerNodeId());
+    var pubKey = nodeConfig.getAllowedNodePublicKeys().get(incoming.proposerNodeId());
     if (pubKey == null || pubKey.isBlank()) {
       throw new InvalidBlockException("Unauthorized Proposer: " + incoming.proposerNodeId());
     }
 
     // Recompute hash
-    String canonical = canonicalBlockFields(
+    var canonical = canonicalBlockFields(
         incoming.height(),
         incoming.timestamp(),
         incoming.evidences(),
         incoming.previousHash(),
         incoming.proposerNodeId()
     );
-    String recomputedHash = hashing.sha256Hex(canonical);
+    var recomputedHash = hashing.sha256Hex(canonical);
 
     if (!Objects.equals(recomputedHash, incoming.hash())) {
       logger.logBusinessError("INVALID_BLOCK_HASH", "Hash mismatch",
@@ -289,8 +369,8 @@ public class LedgerService {
     }
 
     // Verify signature
-    byte[] hashBytes = hexToBytes(incoming.hash());
-    boolean okSig = crypto.verifyEd25519(hashBytes, incoming.signature(), pubKey);
+    var hashBytes = hexToBytes(incoming.hash());
+    var okSig = crypto.verifyEd25519(hashBytes, incoming.signature(), pubKey);
     if (!okSig) {
       logger.logBusinessError("INVALID_BLOCK_SIGNATURE", "Signature verification failed",
           Map.of("proposer", incoming.proposerNodeId()));
@@ -325,8 +405,8 @@ public class LedgerService {
     }
 
     for (int i = 1; i < chain.size(); i++) {
-      Block prev = chain.get(i - 1);
-      Block cur = chain.get(i);
+      var prev = chain.get(i - 1);
+      var cur = chain.get(i);
 
       if (cur.height() != prev.height() + 1) {
         return false;
@@ -335,19 +415,19 @@ public class LedgerService {
         return false;
       }
 
-      String pubKey = nodeConfig.getAllowedNodePublicKeys().get(cur.proposerNodeId());
+      var pubKey = nodeConfig.getAllowedNodePublicKeys().get(cur.proposerNodeId());
       if (pubKey == null || pubKey.isBlank()) {
         return false;
       }
 
-      String canonical = canonicalBlockFields(cur.height(), cur.timestamp(), cur.evidences(),
+      var canonical = canonicalBlockFields(cur.height(), cur.timestamp(), cur.evidences(),
           cur.previousHash(), cur.proposerNodeId());
-      String recomputedHash = hashing.sha256Hex(canonical);
+      var recomputedHash = hashing.sha256Hex(canonical);
       if (!Objects.equals(recomputedHash, cur.hash())) {
         return false;
       }
 
-      byte[] hashBytes = hexToBytes(cur.hash());
+      var hashBytes = hexToBytes(cur.hash());
       if (!crypto.verifyEd25519(hashBytes, cur.signature(), pubKey)) {
         return false;
       }
@@ -364,7 +444,7 @@ public class LedgerService {
    * @return An Optional containing the EvidenceProof (evidence + block) if found.
    */
   public synchronized Optional<EvidenceProof> findEvidenceByHash(String hashHex) {
-    String h = hashHex == null ? "" : hashHex.trim().toLowerCase(Locale.ROOT);
+    var h = hashHex == null ? "" : hashHex.trim().toLowerCase(Locale.ROOT);
 
     for (Block b : chain) {
       for (EvidenceRecord e : b.evidences()) {
@@ -381,13 +461,13 @@ public class LedgerService {
 
   private Block createGenesis() {
     long height = 0;
-    Instant ts = Instant.parse("2020-01-01T00:00:00Z");
+    var ts = Instant.parse("2020-01-01T00:00:00Z");
     List<EvidenceRecord> evidences = List.of();
-    String previousHash = "0".repeat(64);
-    String proposer = "GENESIS";
+    var previousHash = "0".repeat(64);
+    var proposer = "GENESIS";
 
-    String canonical = canonicalBlockFields(height, ts, evidences, previousHash, proposer);
-    String hash = hashing.sha256Hex(canonical);
+    var canonical = canonicalBlockFields(height, ts, evidences, previousHash, proposer);
+    var hash = hashing.sha256Hex(canonical);
 
     return new Block(height, ts, evidences, previousHash, proposer, hash, "GENESIS");
   }
@@ -399,7 +479,7 @@ public class LedgerService {
   private String canonicalBlockFields(long height, Instant ts, List<EvidenceRecord> evidences,
       String previousHash, String proposer) {
     // Deterministic canonicalization (very important)
-    StringBuilder sb = new StringBuilder();
+    var sb = new StringBuilder();
     sb.append("height=").append(height).append("|");
     sb.append("ts=").append(ts.toString()).append("|");
     sb.append("prev=").append(previousHash).append("|");
@@ -407,7 +487,7 @@ public class LedgerService {
     sb.append("evidences=");
 
     // Deterministic sort by evidenceId
-    List<EvidenceRecord> sorted = new ArrayList<>(evidences);
+    var sorted = new ArrayList<>(evidences);
     sorted.sort(Comparator.comparing(EvidenceRecord::evidenceId));
 
     for (EvidenceRecord e : sorted) {
@@ -424,8 +504,8 @@ public class LedgerService {
       sb.append(e.createdAt().toString()).append(",");
 
       // sorted standards
-      List<String> std = e.standards() == null ? List.of() : e.standards();
-      List<String> stdSorted = new ArrayList<>(std);
+      var std = e.standards() == null ? List.<String>of() : e.standards();
+      var stdSorted = new ArrayList<>(std);
       stdSorted.sort(String::compareTo);
       sb.append(String.join("+", stdSorted));
 
@@ -439,7 +519,7 @@ public class LedgerService {
     if (hex == null) {
       return false;
     }
-    String h = hex.trim();
+    var h = hex.trim();
     if (h.length() != 64) {
       return false;
     }
@@ -459,7 +539,7 @@ public class LedgerService {
 
   private static byte[] hexToBytes(String hex) {
     int len = hex.length();
-    byte[] out = new byte[len / 2];
+    var out = new byte[len / 2];
     for (int i = 0; i < len; i += 2) {
       out[i / 2] = (byte) Integer.parseInt(hex.substring(i, i + 2), 16);
     }

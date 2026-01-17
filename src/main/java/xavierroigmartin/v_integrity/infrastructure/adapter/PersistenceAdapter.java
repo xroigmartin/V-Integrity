@@ -42,7 +42,7 @@ public class PersistenceAdapter implements PersistencePort {
     logger.info("Persisting block height={} hash={}", block.height(), block.hash());
 
     // 1. Check idempotency for Block
-    Optional<BlockEntity> existingBlock = blockRepository.findById(block.height());
+    var existingBlock = blockRepository.findById(block.height());
     if (existingBlock.isPresent()) {
       if (existingBlock.get().getHash().equals(block.hash())) {
         logger.info("Block height={} already exists with same hash. Skipping persistence.", block.height());
@@ -55,7 +55,7 @@ public class PersistenceAdapter implements PersistencePort {
     }
 
     // 2. Map Domain Block to Entity
-    BlockEntity blockEntity = new BlockEntity();
+    var blockEntity = new BlockEntity();
     blockEntity.setHeight(block.height());
     // Fix: Block.timestamp() returns Instant, so use it directly
     blockEntity.setTimestamp(block.timestamp());
@@ -65,9 +65,9 @@ public class PersistenceAdapter implements PersistencePort {
     blockEntity.setSignature(block.signature());
 
     // 3. Process Evidences (Find or Create)
-    Set<BlockEvidenceEntity> blockEvidences = block.evidences().stream()
+    var blockEvidences = block.evidences().stream()
         .map(evidenceRecord -> {
-          EvidenceEntity evidenceEntity = findOrCreateEvidence(evidenceRecord);
+          var evidenceEntity = findOrCreateEvidence(evidenceRecord);
           return new BlockEvidenceEntity(blockEntity, evidenceEntity);
         })
         .collect(Collectors.toSet());
@@ -82,7 +82,7 @@ public class PersistenceAdapter implements PersistencePort {
   private EvidenceEntity findOrCreateEvidence(EvidenceRecord record) {
     return evidenceRepository.findByHash(record.hash())
         .orElseGet(() -> {
-          EvidenceEntity newEntity = new EvidenceEntity();
+          var newEntity = new EvidenceEntity();
           // Use the ID from the record if present, otherwise generate (though domain should usually have it)
           // In this PoC, EvidenceRecord has an ID.
           newEntity.setEvidenceId(record.evidenceId() != null ? UUID.fromString(record.evidenceId()) : UUID.randomUUID());

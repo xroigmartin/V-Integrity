@@ -25,7 +25,7 @@ class LedgerServicePersistenceIntegrationTest extends AbstractIntegrationTest {
   @Sql(scripts = "/clean-db.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
   void commitAsLeader_shouldPersistBlockAndEvidences() {
     // Given: An evidence is submitted
-    EvidenceRecord evidence = new EvidenceRecord(
+    var evidence = new EvidenceRecord(
         UUID.randomUUID().toString(),
         "HOM-002",
         "RUN-002",
@@ -45,16 +45,17 @@ class LedgerServicePersistenceIntegrationTest extends AbstractIntegrationTest {
     var committedBlock = ledgerService.commitAsLeader();
 
     // Then: The block should be found in the database
-    var persistedBlock = blockRepository.findById(committedBlock.height());
+    var persistedBlockOpt = blockRepository.findById(committedBlock.height());
     
-    assertThat(persistedBlock).isPresent();
+    assertThat(persistedBlockOpt).isPresent();
+    var persistedBlock = persistedBlockOpt.get();
     
-    assertThat(persistedBlock.get().getHash()).isEqualTo(committedBlock.hash());
-    assertThat(persistedBlock.get().getHeight()).isEqualTo(1L);
+    assertThat(persistedBlock.getHash()).isEqualTo(committedBlock.hash());
+    assertThat(persistedBlock.getHeight()).isEqualTo(1L);
     
     // And it should contain the evidence
-    assertThat(persistedBlock.get().getBlockEvidences()).hasSize(1);
-    var persistedEvidence = persistedBlock.get().getBlockEvidences().iterator().next().getEvidence();
+    assertThat(persistedBlock.getBlockEvidences()).hasSize(1);
+    var persistedEvidence = persistedBlock.getBlockEvidences().iterator().next().getEvidence();
     assertThat(persistedEvidence.getHash()).isEqualTo(evidence.hash());
   }
 }

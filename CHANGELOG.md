@@ -3,6 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- **Rehydration**: Implemented ledger rehydration on startup (`LedgerRehydrationAdapter`) with fail-fast integrity validation.
 - **Persistence**: Implemented transactional persistence for blocks and evidences using JPA (`PersistenceAdapter`).
 - **Security**: Implemented Role-Based Access Control (RBAC) in PostgreSQL with `ledger_owner` (DDL) and `ledger_app` (DML) roles.
 - **Database Migration**: Decoupled Flyway migration from application startup. Added a dedicated `flyway-migrator` service in Docker Compose.
