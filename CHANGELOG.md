@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- **Rehydration**: Implemented ledger rehydration on startup (`LedgerRehydrationAdapter`) with fail-fast integrity validation.
+- **Persistence**: Implemented transactional persistence for blocks and evidences using JPA (`PersistenceAdapter`).
+- **Security**: Implemented Role-Based Access Control (RBAC) in PostgreSQL with `ledger_owner` (DDL) and `ledger_app` (DML) roles.
+- **Database Migration**: Decoupled Flyway migration from application startup. Added a dedicated `flyway-migrator` service in Docker Compose.
+- **Database Schema**: Created initial Flyway migration `V1__init_ledger.sql` defining `blocks`, `evidences`, and `block_evidences` tables in a dedicated `ledger` schema.
+- **Immutability**: Implemented PostgreSQL triggers to enforce append-only behavior (blocking UPDATE/DELETE) on ledger tables.
+- **Persistence Infrastructure**: Added PostgreSQL 17 to `docker-compose.yml` and configured Spring Boot Data JPA with Flyway support.
+- **Database Configuration**: Updated `application.yaml` and node-specific profiles to connect to the local PostgreSQL instance.
+- **Dependencies**: Added `spring-boot-starter-data-jpa`, `postgresql`, and `flyway-core` to `pom.xml`.
 
 ## [0.3.0] - 2026-01-06
 
@@ -71,7 +80,7 @@ All notable changes to this project will be documented in this file.
   - `POST /api/blocks/commit`: Trigger block creation (Leader only).
   - `GET /api/chain`: Retrieve the blockchain.
   - `POST /api/verify`: Verify evidence integrity and inclusion in the chain.
-- **Security**: Externalized private/public keys using environment variables (`.env` support).
+  - `Security`: Externalized private/public keys using environment variables (`.env` support).
 - **Testing**: Added unit tests for core services and adapters.
 - **Documentation**: Comprehensive JavaDoc for all classes and ports.
 
