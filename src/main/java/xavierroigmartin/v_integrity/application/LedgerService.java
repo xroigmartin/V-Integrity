@@ -17,6 +17,7 @@ import xavierroigmartin.v_integrity.application.port.out.CryptoPort;
 import xavierroigmartin.v_integrity.application.port.out.HashingPort;
 import xavierroigmartin.v_integrity.application.port.out.LogPort;
 import xavierroigmartin.v_integrity.application.port.out.NodeConfigurationPort;
+import xavierroigmartin.v_integrity.application.port.out.PersistencePort;
 import xavierroigmartin.v_integrity.application.port.out.ReplicationPort;
 import xavierroigmartin.v_integrity.domain.Block;
 import xavierroigmartin.v_integrity.domain.EvidenceRecord;
@@ -41,6 +42,7 @@ public class LedgerService {
   private final HashingPort hashing;
   private final CryptoPort crypto;
   private final ReplicationPort replication;
+  private final PersistencePort persistence;
   private final LogPort logger;
 
   // In-memory state (PoC)
@@ -49,11 +51,12 @@ public class LedgerService {
   private final AtomicLong evidenceSequence = new AtomicLong(0);
 
   public LedgerService(NodeConfigurationPort nodeConfig, HashingPort hashing, CryptoPort crypto,
-      ReplicationPort replication, LogPort logger) {
+      ReplicationPort replication, PersistencePort persistence, LogPort logger) {
     this.nodeConfig = nodeConfig;
     this.hashing = hashing;
     this.crypto = crypto;
     this.replication = replication;
+    this.persistence = persistence;
     this.logger = logger;
     chain.add(createGenesis());
   }
@@ -202,6 +205,9 @@ public class LedgerService {
       // append-only
       chain.add(newBlock);
       mempool.clear();
+      
+      // Persist immediately
+      persistence.persistBlock(newBlock);
     }
 
     logger.logBusinessEvent("BLOCK_COMMITTED", Map.of(
@@ -231,6 +237,8 @@ public class LedgerService {
             "reason", "Already exists",
             "height", incoming.height()
         ));
+        // Ensure persistence is consistent even if in-memory had it
+        persistence.persistBlock(incoming);
         return;
       }
       // If height is lower or same but different hash -> Fork or old block.
@@ -240,6 +248,7 @@ public class LedgerService {
       Block existing = chain.get((int) incoming.height());
       if (existing.hash().equals(incoming.hash())) {
          // Already have it
+         persistence.persistBlock(incoming);
          return;
       } else {
          // Conflict/Fork
@@ -294,6 +303,9 @@ public class LedgerService {
 
     // PoC: remove confirmed evidences from mempool if they exist
     mempool.removeAll(incoming.evidences());
+    
+    // Persist immediately
+    persistence.persistBlock(incoming);
 
     logger.logBusinessEvent("BLOCK_ACCEPTED", Map.of(
         "height", incoming.height(),
