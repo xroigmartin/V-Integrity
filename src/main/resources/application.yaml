@@ -9,11 +9,26 @@ spring:
       enabled: true
   jackson:
     time-zone: UTC
+  datasource:
+    # URL must be provided via environment variable SPRING_DATASOURCE_URL
+    # Example Local: jdbc:postgresql://localhost:5432/ledger
+    # Example Docker: jdbc:postgresql://postgres:5432/ledger
+    url: ${SPRING_DATASOURCE_URL}
+    # App uses restricted credentials (DML only)
+    username: ${POSTGRES_APP_USER:ledger_app}
+    password: ${POSTGRES_APP_PASSWORD:ledger_app_password}
   jpa:
+    open-in-view: false
     properties:
       hibernate:
+        # Use the dedicated schema 'ledger' by default
+        default_schema: ledger
+        ddl-auto: validate
         jdbc:
           time_zone: UTC
+  flyway:
+    # Disable auto-migration on startup. Migrations are handled by an external process (Docker/CI).
+    enabled: false
 
 logging:
   level:

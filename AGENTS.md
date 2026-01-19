@@ -73,9 +73,9 @@ The backend MUST follow strict separation with this specific package structure:
 ## Security Standards (Critical)
 
 ### General & Secrets
-- **Zero Trust in Code**: Never hardcode private keys, passwords, or secrets.
-- **Environment Variables**: Use `${VAR_NAME}` placeholders.
-- **Local Development**: Use a `.env` file (strictly ignored by git).
+- **Zero Trust in Code**: Never hardcode private keys, passwords, secrets, or sensitive connection strings (e.g., database URLs).
+- **Environment Variables**: Use `${VAR_NAME}` placeholders for all sensitive configuration.
+- **Local Development**: Use a `.env` file (strictly ignored by git) to provide values for these variables.
 
 ### Application Security (OWASP)
 - **Input Validation**: All external inputs (REST, CLI) must be strictly validated using Bean Validation (`@Valid`, `@NotBlank`) before processing.
