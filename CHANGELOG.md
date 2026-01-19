@@ -3,6 +3,43 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- **Rehydration**: Implemented ledger rehydration on startup (`LedgerRehydrationAdapter`) with fail-fast integrity validation.
+- **Persistence**: Implemented transactional persistence for blocks and evidences using JPA (`PersistenceAdapter`).
+- **Security**: Implemented Role-Based Access Control (RBAC) in PostgreSQL with `ledger_owner` (DDL) and `ledger_app` (DML) roles.
+- **Database Migration**: Decoupled Flyway migration from application startup. Added a dedicated `flyway-migrator` service in Docker Compose.
+- **Database Schema**: Created initial Flyway migration `V1__init_ledger.sql` defining `blocks`, `evidences`, and `block_evidences` tables in a dedicated `ledger` schema.
+- **Immutability**: Implemented PostgreSQL triggers to enforce append-only behavior (blocking UPDATE/DELETE) on ledger tables.
+- **Persistence Infrastructure**: Added PostgreSQL 17 to `docker-compose.yml` and configured Spring Boot Data JPA with Flyway support.
+- **Database Configuration**: Updated `application.yaml` and node-specific profiles to connect to the local PostgreSQL instance.
+- **Dependencies**: Added `spring-boot-starter-data-jpa`, `postgresql`, and `flyway-core` to `pom.xml`.
+
+## [0.4.0] - 2026-01-19
+
+### Added
+- **PostgreSQL Persistence**:
+    - Replaced in-memory storage with a relational database model.
+    - Implemented `PersistenceAdapter` and `LedgerRehydrationAdapter` using Spring Data JPA.
+    - Designed a normalized schema with `blocks` and `evidence_records` tables.
+- **Transactional Integrity**:
+    - Implemented `@Transactional` boundaries for block commitment and persistence.
+    - Added fail-fast validation to prevent partial state updates.
+- **Ledger Rehydration**:
+    - Implemented logic to rebuild the in-memory state from the database on startup.
+    - Optimized startup time by loading only necessary headers or recent blocks (configurable).
+- **Database Migration**:
+    - Decoupled schema management using SQL scripts (Flyway-ready structure).
+    - Added initialization scripts for local development and testing.
+- **Infrastructure**:
+    - Added PostgreSQL container to `docker-compose.yml`.
+    - Configured `application.yml` for multiple profiles (`dev`, `test`, `prod`).
+    - Secured database credentials using environment variables.
+- **Testing**:
+    - Integrated **Testcontainers** for isolated PostgreSQL integration tests.
+    - Implemented `SingletonPostgresContainer` for faster test execution.
+    - Added comprehensive integration tests for the persistence layer (`LedgerServicePersistenceIntegrationTest`, `LedgerRehydrationIntegrationTest`).
+- **Refactoring**:
+    - Decoupled `LedgerService` from specific storage implementations via `PersistencePort`.
+    - Introduced `BlockEntity` and `EvidenceEntity` with surrogate keys for database efficiency.
 
 ## [0.3.0] - 2026-01-06
 
@@ -71,7 +108,7 @@ All notable changes to this project will be documented in this file.
   - `POST /api/blocks/commit`: Trigger block creation (Leader only).
   - `GET /api/chain`: Retrieve the blockchain.
   - `POST /api/verify`: Verify evidence integrity and inclusion in the chain.
-- **Security**: Externalized private/public keys using environment variables (`.env` support).
+  - `Security`: Externalized private/public keys using environment variables (`.env` support).
 - **Testing**: Added unit tests for core services and adapters.
 - **Documentation**: Comprehensive JavaDoc for all classes and ports.
 

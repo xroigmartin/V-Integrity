@@ -1,6 +1,12 @@
 server:
   port: 8083
 
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${POSTGRES_APP_USER:ledger_app}
+    password: ${POSTGRES_APP_PASSWORD:ledger_app_password}
+
 ledger:
   node:
     nodeId: "node-3"

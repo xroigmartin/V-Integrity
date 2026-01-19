@@ -10,6 +10,7 @@ public final class AppErrorCodes {
   // General
   public static final String ERR_VALIDATION = "ERR_VALIDATION";
   public static final String ERR_UNEXPECTED = "ERR_UNEXPECTED";
+  public static final String ERR_INTERNAL_ERROR = "ERR_INTERNAL_ERROR"; // Added for internal server errors
   public static final String ERR_INFRASTRUCTURE = "ERR_INFRASTRUCTURE";
 
   // Domain

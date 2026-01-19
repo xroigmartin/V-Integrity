@@ -17,6 +17,9 @@
     - **Push**: Real-time block propagation to peers.
     - **Pull (Catch-up)**: Synchronization mechanism for nodes recovering from downtime.
     - **Auto-Sync**: Nodes automatically sync with peers on startup.
+- **Persistence**:
+    - **PostgreSQL**: Stores blocks and evidences in a relational database.
+    - **Append-Only**: Ensures data immutability at the database level.
 - **Docker Ready**: Includes Dockerfile and Compose for instant deployment.
 - **OpenAPI Docs**: Interactive API documentation via Swagger UI.
 
@@ -27,6 +30,7 @@
 - **Architecture**: Hexagonal (Ports & Adapters) + DDD
 - **Build Tool**: Maven
 - **Containerization**: Docker & Docker Compose
+- **Database**: PostgreSQL 17
 
 ## 🏗️ Architecture
 
@@ -34,7 +38,7 @@ The project follows a strict Hexagonal Architecture:
 
 - **Domain**: Core business logic and models (`Block`, `EvidenceRecord`). Framework-agnostic.
 - **Application**: Use cases and Ports (`LedgerService`, `SyncService`, `CryptoPort`).
-- **Infrastructure**: Adapters for external concerns (`CryptoAdapter`, `ReplicationAdapter`, `SyncAdapter`, `AutoSyncAdapter`).
+- **Infrastructure**: Adapters for external concerns (`CryptoAdapter`, `ReplicationAdapter`, `SyncAdapter`, `AutoSyncAdapter`, `PersistenceAdapter`).
 - **Interfaces**: Entry points to the application (`LedgerController`).
 
 ## 🐳 Running with Docker (Recommended)
@@ -89,6 +93,23 @@ LEDGER_PRIVATE_KEY_BASE64=...
 
 # Public Key of the authorized node (Base64 X.509)
 LEDGER_NODE1_PUBLIC_KEY_BASE64=...
+
+# Database Configuration (PostgreSQL)
+POSTGRES_DB=ledger
+POSTGRES_USER=ledger
+POSTGRES_PASSWORD=ledger
+
+# Database Roles (RBAC)
+POSTGRES_OWNER_USER=ledger_owner
+POSTGRES_OWNER_PASSWORD=ledger_owner_password
+POSTGRES_APP_USER=ledger_app
+POSTGRES_APP_PASSWORD=ledger_app_password
+
+# Connection URLs
+# For Local Development (IntelliJ)
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/ledger
+# For Docker Compose
+DOCKER_DATASOURCE_URL=jdbc:postgresql://postgres:5432/ledger
 ```
 
 ### Application Properties

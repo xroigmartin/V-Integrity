@@ -10,10 +10,12 @@ import xavierroigmartin.v_integrity.application.port.out.CryptoPort;
 import xavierroigmartin.v_integrity.application.port.out.HashingPort;
 import xavierroigmartin.v_integrity.application.port.out.LogPort;
 import xavierroigmartin.v_integrity.application.port.out.NodeConfigurationPort;
+import xavierroigmartin.v_integrity.application.port.out.PersistencePort;
 import xavierroigmartin.v_integrity.application.port.out.ReplicationPort;
 import xavierroigmartin.v_integrity.domain.Block;
 import xavierroigmartin.v_integrity.domain.EvidenceRecord;
 import xavierroigmartin.v_integrity.domain.exception.InvalidBlockException;
+import xavierroigmartin.v_integrity.domain.exception.LedgerCorruptException;
 import xavierroigmartin.v_integrity.infrastructure.adapter.CryptoAdapter;
 import xavierroigmartin.v_integrity.infrastructure.adapter.HashingAdapter;
 
@@ -36,6 +38,8 @@ class LedgerServiceTest {
     @Mock
     private ReplicationPort replication;
     @Mock
+    private PersistencePort persistence;
+    @Mock
     private LogPort logger;
 
     private LedgerService ledgerService;
@@ -53,8 +57,8 @@ class LedgerServiceTest {
         hashing = new HashingAdapter();
 
         // Generate real keys for testing
-        KeyPairGenerator kpg = KeyPairGenerator.getInstance("Ed25519");
-        KeyPair kp = kpg.generateKeyPair();
+        var kpg = KeyPairGenerator.getInstance("Ed25519");
+        var kp = kpg.generateKeyPair();
         myPrivateKey = Base64.getEncoder().encodeToString(kp.getPrivate().getEncoded());
         myPublicKey = Base64.getEncoder().encodeToString(kp.getPublic().getEncoded());
 
@@ -62,12 +66,12 @@ class LedgerServiceTest {
         lenient().when(nodeConfig.getNodeId()).thenReturn(myNodeId);
         lenient().when(nodeConfig.getAllowedNodePublicKeys()).thenReturn(Map.of(myNodeId, myPublicKey));
         
-        ledgerService = new LedgerService(nodeConfig, hashing, crypto, replication, logger);
+        ledgerService = new LedgerService(nodeConfig, hashing, crypto, replication, persistence, logger);
     }
 
     @Test
     void should_start_with_genesis_block() {
-        List<Block> chain = ledgerService.chain();
+        var chain = ledgerService.chain();
         assertEquals(1, chain.size());
         assertEquals(0, chain.get(0).height());
         assertEquals("GENESIS", chain.get(0).proposerNodeId());
@@ -75,8 +79,8 @@ class LedgerServiceTest {
 
     @Test
     void should_submit_evidence_to_mempool() {
-        EvidenceRecord evidence = createSampleEvidence();
-        EvidenceRecord submitted = ledgerService.submitEvidence(evidence);
+        var evidence = createSampleEvidence();
+        var submitted = ledgerService.submitEvidence(evidence);
 
         assertEquals(1, ledgerService.mempool().size());
         assertEquals(evidence.evidenceId(), submitted.evidenceId());
@@ -96,7 +100,7 @@ class LedgerServiceTest {
         ledgerService.submitEvidence(createSampleEvidence());
 
         // When
-        Block block = ledgerService.commitAsLeader();
+        var block = ledgerService.commitAsLeader();
 
         // Then
         assertNotNull(block);
@@ -104,6 +108,9 @@ class LedgerServiceTest {
         assertEquals(1, block.evidences().size());
         assertEquals(myNodeId, block.proposerNodeId());
         
+        // Verify persistence was called
+        verify(persistence).persistBlock(eq(block));
+
         // Verify replication was called
         verify(replication).replicateBlockToPeers(eq(block), anyList());
         
@@ -129,10 +136,10 @@ class LedgerServiceTest {
         when(nodeConfig.getPrivateKeyBase64()).thenReturn(myPrivateKey);
         
         ledgerService.submitEvidence(createSampleEvidence());
-        Block validBlock = ledgerService.commitAsLeader();
+        var validBlock = ledgerService.commitAsLeader();
 
         // Reset service to simulate a follower receiving this block
-        LedgerService followerService = new LedgerService(nodeConfig, hashing, crypto, replication, logger);
+        var followerService = new LedgerService(nodeConfig, hashing, crypto, replication, persistence, logger);
         
         // When
         followerService.acceptReplicatedBlock(validBlock);
@@ -140,6 +147,9 @@ class LedgerServiceTest {
         // Then
         assertEquals(2, followerService.chain().size());
         assertEquals(validBlock, followerService.chain().get(1));
+        
+        // Verify persistence was called
+        verify(persistence, times(2)).persistBlock(any(Block.class)); // 1 for commit, 1 for accept
         
         // Verify logging: 1 submit + 1 commit + 1 accept = 3 times
         verify(logger, times(3)).logBusinessEvent(anyString(), anyMap());
@@ -151,10 +161,10 @@ class LedgerServiceTest {
         when(nodeConfig.isLeader()).thenReturn(true);
         when(nodeConfig.getPrivateKeyBase64()).thenReturn(myPrivateKey);
         ledgerService.submitEvidence(createSampleEvidence());
-        Block validBlock = ledgerService.commitAsLeader();
+        var validBlock = ledgerService.commitAsLeader();
 
         // Create a tampered block with same signature but different hash/content
-        Block tamperedBlock = new Block(
+        var tamperedBlock = new Block(
                 validBlock.height(),
                 validBlock.timestamp(),
                 validBlock.evidences(),
@@ -164,13 +174,68 @@ class LedgerServiceTest {
                 validBlock.signature()
         );
 
-        LedgerService followerService = new LedgerService(nodeConfig, hashing, crypto, replication, logger);
+        var followerService = new LedgerService(nodeConfig, hashing, crypto, replication, persistence, logger);
 
         // When/Then
         assertThrows(InvalidBlockException.class, () -> followerService.acceptReplicatedBlock(tamperedBlock));
         
         // Verify error logging
         verify(logger).logBusinessError(eq("INVALID_BLOCK_HASH"), anyString(), anyMap());
+        
+        // Verify persistence was NOT called for invalid block
+        verify(persistence, times(1)).persistBlock(any(Block.class));
+    }
+
+    // --- REHYDRATION TESTS (Hito 4) ---
+
+    @Test
+    void should_initialize_chain_from_valid_blocks() {
+        // Given: A valid chain (Genesis + 1 block)
+        when(nodeConfig.isLeader()).thenReturn(true);
+        when(nodeConfig.getPrivateKeyBase64()).thenReturn(myPrivateKey);
+        ledgerService.submitEvidence(createSampleEvidence());
+        var block1 = ledgerService.commitAsLeader();
+        
+        var rehydratedBlocks = List.of(ledgerService.chain().get(0), block1);
+
+        // Reset service
+        var newService = new LedgerService(nodeConfig, hashing, crypto, replication, persistence, logger);
+        
+        // When
+        newService.initializeChain(rehydratedBlocks);
+
+        // Then
+        assertEquals(2, newService.chain().size());
+        assertEquals(block1, newService.latestBlock());
+        verify(logger).logBusinessEvent(eq("CHAIN_REHYDRATED"), anyMap());
+    }
+
+    @Test
+    void should_fail_initialization_if_chain_invalid() {
+        // Given: A valid chain
+        when(nodeConfig.isLeader()).thenReturn(true);
+        when(nodeConfig.getPrivateKeyBase64()).thenReturn(myPrivateKey);
+        ledgerService.submitEvidence(createSampleEvidence());
+        var block1 = ledgerService.commitAsLeader();
+        
+        // Tamper with block1
+        var tamperedBlock = new Block(
+                block1.height(),
+                block1.timestamp(),
+                block1.evidences(),
+                block1.previousHash(),
+                block1.proposerNodeId(),
+                "badhash", 
+                block1.signature()
+        );
+        
+        var corruptedChain = List.of(ledgerService.chain().get(0), tamperedBlock);
+
+        // Reset service
+        var newService = new LedgerService(nodeConfig, hashing, crypto, replication, persistence, logger);
+
+        // When/Then
+        assertThrows(LedgerCorruptException.class, () -> newService.initializeChain(corruptedChain));
     }
 
     private EvidenceRecord createSampleEvidence() {
