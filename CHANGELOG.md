@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-01-19
+
+### Added
+- **PostgreSQL Persistence**:
+    - Replaced in-memory storage with a relational database model.
+    - Implemented `PersistenceAdapter` and `LedgerRehydrationAdapter` using Spring Data JPA.
+    - Designed a normalized schema with `blocks` and `evidence_records` tables.
+- **Transactional Integrity**:
+    - Implemented `@Transactional` boundaries for block commitment and persistence.
+    - Added fail-fast validation to prevent partial state updates.
+- **Ledger Rehydration**:
+    - Implemented logic to rebuild the in-memory state from the database on startup.
+    - Optimized startup time by loading only necessary headers or recent blocks (configurable).
+- **Database Migration**:
+    - Decoupled schema management using SQL scripts (Flyway-ready structure).
+    - Added initialization scripts for local development and testing.
+- **Infrastructure**:
+    - Added PostgreSQL container to `docker-compose.yml`.
+    - Configured `application.yml` for multiple profiles (`dev`, `test`, `prod`).
+    - Secured database credentials using environment variables.
+- **Testing**:
+    - Integrated **Testcontainers** for isolated PostgreSQL integration tests.
+    - Implemented `SingletonPostgresContainer` for faster test execution.
+    - Added comprehensive integration tests for the persistence layer (`LedgerServicePersistenceIntegrationTest`, `LedgerRehydrationIntegrationTest`).
+- **Refactoring**:
+    - Decoupled `LedgerService` from specific storage implementations via `PersistencePort`.
+    - Introduced `BlockEntity` and `EvidenceEntity` with surrogate keys for database efficiency.
+
 ## [0.3.0] - 2026-01-06
 
 ### Added
