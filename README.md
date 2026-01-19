@@ -1,6 +1,6 @@
 # V-Integrity
 
-![Version](https://img.shields.io/badge/version-0.3.0--SNAPSHOT-blue.svg)
+![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
 [See Changelog](CHANGELOG.md) | [Contributing Guide](CONTRIBUTING.md)
@@ -20,6 +20,8 @@
 - **Persistence**:
     - **PostgreSQL**: Stores blocks and evidences in a relational database.
     - **Append-Only**: Ensures data immutability at the database level.
+    - **Transactional Integrity**: Guarantees atomic block commitment and fail-fast validation.
+    - **Rehydration**: Rebuilds in-memory state from the database on startup.
 - **Docker Ready**: Includes Dockerfile and Compose for instant deployment.
 - **OpenAPI Docs**: Interactive API documentation via Swagger UI.
 
